@@ -1,0 +1,12 @@
+2015-01: pizza 2051, marmellata 2003, olio 1977, acqua 1969, miele 1961
+2015-02: miele 1909, biscotti 1895, pane 1871, pizza 1870, latte 1867
+2015-03: latte 2056, olio 2020, acqua 2006, pizza 2004, vino 1992
+2015-04: birra 2026, acqua 1990, vino 1983, marmellata 1974, biscotti 1956
+2015-05: acqua 2074, miele 2022, biscotti 2003, pizza 1992, birra 1986
+2015-06: acqua 1990, vino 1947, pizza 1911, pane 1908, birra 1904
+2015-07: latte 2079, birra 2077, pizza 2061, pane 2039, biscotti 2022
+2015-08: birra 2102, olio 2087, vino 2047, pane 2047, latte 2044
+2015-09: olio 1988, marmellata 1988, latte 1978, acqua 1975, pane 1966
+2015-10: pane 2025, olio 2016, pizza 2000, latte 1996, biscotti 1996
+2015-11: olio 1989, acqua 1979, marmellata 1971, pane 1955, latte 1953
+2015-12: latte 2059, pizza 2052, vino 1992, olio 1986, birra 1976

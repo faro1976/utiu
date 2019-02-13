@@ -1,0 +1,11 @@
+2015-01: vino 2, miele 2, marmellata 2, pane 1, latte 1
+2015-02: miele 2, biscotti 2, pizza 1, olio 1, latte 1
+2015-03: pizza 1, pane 1, miele 1, birra 1, acqua 1
+2015-04: olio 1, miele 1, biscotti 1
+2015-05: pane 1, olio 1
+2015-07: vino 1, marmellata 1, latte 1, acqua 1
+2015-08: birra 2, vino 1, pizza 1, pane 1, olio 1
+2015-09: birra 2, acqua 2, vino 1, olio 1, latte 1
+2015-10: pizza 1, marmellata 1, biscotti 1, acqua 1
+2015-11: olio 1, marmellata 1, latte 1
+2015-12: vino 1

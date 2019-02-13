@@ -1,0 +1,10 @@
+latte=2.0
+pane=1.5
+acqua=0.4
+vino=1.5
+birra=2.0
+biscotti=1.4
+marmellata=2.3
+miele=3.8
+olio=6.0
+pizza=2.1
