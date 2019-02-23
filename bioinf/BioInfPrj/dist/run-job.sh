@@ -1,0 +1,2 @@
+ ~/src/extlib/spark-2.3.2-bin-hadoop2.7/bin/spark-submit --class it.utiu.bioinf.Runner --master spark://localhost:7077 --executor-memory 12g --total-executor-cores 8 target/BioInfPrj-0.0.1-SNAPSHOT.jar
+ 

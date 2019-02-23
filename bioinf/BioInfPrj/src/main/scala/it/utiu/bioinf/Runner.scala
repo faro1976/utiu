@@ -33,16 +33,36 @@ import shapeless.the
 import org.spark_project.dmg.pmml.ROC
 import org.apache.spark.sql._
 import org.apache.spark.sql.functions._
+import org.apache.spark.sql.types.IntegerType
+import org.apache.spark.sql.types.LongType
+import org.apache.spark.ml.feature.PCA
+import org.apache.spark.ml.linalg.DenseVector
+import org.apache.spark.SparkConf
 
 object Runner {
-  //  val PATH = "/Users/robertofavaroni/UniNettuno/dataset/tcga-brca/methylation_beta_value/"
-  val PATH = "/Users/robertofavaroni/UniNettuno/dataset/tcga-brca/sample/"
+  var PATH = "hdfs://localhost:54310/bioinf/"
+//  var PATH = "/Users/robertofavaroni/UniNettuno/dataset/tcga-brca/methylation_beta_value/"
+//  var PATH = "/Users/robertofavaroni/UniNettuno/dataset/tcga-brca/sample/"
+  var PCA_ENABLED = true
+  var ITER_NUM = 3
   val T = "BRCA"
-
+ 
   def main(args: Array[String]): Unit = {
+    
+    if (args.size > 0) {
+      //command line: PATH, PCA_ENABLED, ITER_NUM
+      PATH = args(0)
+      PCA_ENABLED = args(1).toBoolean
+      ITER_NUM = args(2).toInt
+    }
+
+    val conf = new SparkConf().setAppName("Progetto Big Data applicati alla Bioinformatica")
+//      .set("spark.cores.max", "8")
+//      .set("spark.executor.memory", "12g")
+    
     val spark = SparkSession.builder
-      .appName("Progetto Big Data applicati alla Bioinformatica")
-      .master("local")
+//      .master("local")
+      .config(conf)
       .getOrCreate()
     val sc = spark.sparkContext
     sc.setLogLevel("ERROR")
@@ -52,6 +72,7 @@ object Runner {
 
     val clinics = Array("manually_curated__tissue_status", "biospecimen__shared__patient_id")
     val genesBRCA = Array("A2M", "ABCB1", "ABCC1", "ACOT7", "ACOX2", "ADAMTS16", "ADAMTS17", "ADORA2A", "AQP1", "CA12", "CDCP1", "CREB3L1", "CRYAB", "FGF1", "IL11RA", "INHBA", "ITIH5", "KIF26B", "LRRC3B", "MEG3", "MUC1", "PRKD1", "SDPR")
+    println("GENES BRCA length: "+ genesBRCA.length)
     //    val sitesBRCA = Array("cg12417807","cg11139127","cg27166707")
 
     def parseMeta(t: (String, String)): Row = {
@@ -71,20 +92,21 @@ object Runner {
       r
     }
 
-    val schemaPatient = new StructType()
+    val schemaSamplePatient = new StructType()
       .add(StructField("manually_curated__opengdc_id", StringType, false))
       .add(StructField("biospecimen__shared__patient_id", StringType, false))
       .add(StructField("manually_curated__tissue_status", StringType, false))
       .add(StructField("label", DoubleType, false))
 
+
     //uso wholeTextFiles per poter leggere i dati in maniera autocontenuta ad ogni iterazione di map
     val rddMeta = sc.wholeTextFiles(PATH + "*.meta").map(parseMeta)
-    val dfMeta = spark.createDataFrame(rddMeta, schemaPatient).cache
+    val dfMeta = spark.createDataFrame(rddMeta, schemaSamplePatient).cache
     println("META DATAFRAME - total metadata items: " + dfMeta.count())
-    println("META DATAFRAME - total ptatiens: " + dfMeta.select("biospecimen__shared__patient_id").distinct().count())
+    println("META DATAFRAME - total patients: " + dfMeta.select("biospecimen__shared__patient_id").distinct().count())
     dfMeta.show
 
-    //TODO ROB: un modo più elegante e semplice per sapere associazione siti->gene??
+    //popolamento dinamico dei siti da mappare come feature in funzione del gene di appartenenza
     val rddSites = sc.textFile(PATH + "*.bed").map(r => {
       val vals = r.split("\t")
       var ret = ""
@@ -93,9 +115,9 @@ object Runner {
       }
       ret
     }).filter(_ != "").distinct()
-    //TODO ROB: fare dimensionality (features) reduction!
-    val sitesBRCA = rddSites.take(50)
-    println("sitesBRCA length: " + sitesBRCA.length)
+//    val sitesBRCA = rddSites.take(50)
+    val sitesBRCA = rddSites.collect()
+    println("SITES BRCA length: " + sitesBRCA.length)
 
     def parseSample(t: (String, String)): Row = {
       val CpGKV = Map[String, Double]()
@@ -117,40 +139,48 @@ object Runner {
       r
     }
 
-    val arrSchemaSample = ArrayBuffer[StructField]()
-    arrSchemaSample.append(StructField("manually_curated__opengdc_id", StringType, false))
-    sitesBRCA.foreach(s => arrSchemaSample.append(StructField(s, DoubleType, false)))
-    val schemaSample = new StructType(arrSchemaSample.toArray)
-    println("SAMPLE schema: " + schemaSample)
+    val arrObserv = ArrayBuffer[StructField]()
+    arrObserv.append(StructField("manually_curated__opengdc_id", StringType, false))
+    sitesBRCA.foreach(s => arrObserv.append(StructField(s, DoubleType, false)))
+    val schemaSample = new StructType(arrObserv.toArray)
 
-    var purged = 0
-    val rddSample = sc.wholeTextFiles(PATH + "*.bed").map(parseSample).filter(row => {
+    val rddSampleF = sc.wholeTextFiles(PATH + "*.bed").cache
+    println("sample files to read : " + rddSampleF.count)
+    val rddSample = rddSampleF.map(parseSample).filter(row => {
       val seq = row.toSeq
-      var containtNaN = false
+      var containsNaN = false
       breakable {
         seq.foreach(f => {
           if (f.isInstanceOf[Double] && f.asInstanceOf[Double].isNaN) {
-            containtNaN = true
-            purged += 1
+            containsNaN = true
             break
           }
         })
       }
-      !containtNaN
+      !containsNaN
     })
-    val dfSample = spark.createDataFrame(rddSample, schemaSample).cache
-    println("tissues purged: " + purged)
-    println("TISSUE SAMPLE DATAFRAME - total tissues " + dfSample.count())
-    dfSample.show
+    val dfSample = spark.createDataFrame(rddSample, schemaSample)
+    println("samples after purging: " + dfSample.count())
 
     val dfJoined = dfSample.join(dfMeta, "manually_curated__opengdc_id")
     println("JOINED DATAFRAME")
     dfJoined.show
 
-    //add features based on BRCA relevant genes
-    val assembler = new VectorAssembler().setInputCols(sitesBRCA).setOutputCol("features")
-    //add new features column
-    val dfExtended = assembler.transform(dfJoined)
+    //acquisisco le feature dai siti individuati    
+    //converto tutte le feature in un singolo vettore di feature e lo aggiungo come colonna
+    val assembler = new VectorAssembler().setInputCols(sitesBRCA).setOutputCol("tmpFeatures")
+    val dfFeatures = assembler.transform(dfJoined)
+    
+    //uso PCA for dimensionality reduction
+    //creo dataframe con colonne feature vector (tmpFeatures) e PCA feature vector (features)
+        val pca = new PCA()
+      .setInputCol("tmpFeatures")
+      .setOutputCol("features")
+      .setK(5)
+      .fit(dfFeatures)
+      val dfExtended = pca.transform(dfFeatures).cache
+      dfExtended.show
+    println("pca feature columns: "+ dfExtended.select("features").first().get(0).asInstanceOf[DenseVector].size)
 
     //    val labelIndexer2 = new StringIndexer()
     //      .setInputCol("label")
@@ -235,7 +265,7 @@ object Runner {
     //    println(s"Test Error = ${1.0 - accuracyLR2}")
     //
     //
-    val lr = new LogisticRegression().setMaxIter(10).setRegParam(0.3).setElasticNetParam(0.8)
+    val lr = new LogisticRegression().setMaxIter(ITER_NUM).setRegParam(0.3).setElasticNetParam(0.8)
       .setLabelCol("indexedLabel")
       .setFeaturesCol("indexedFeatures")
 
@@ -248,7 +278,6 @@ object Runner {
 
     // Make predictions.
     val predictionsLR = modelLR.transform(testData)
-    calculateMetrics("LOGISTIC REGRESSION", predictionsLR)
 
     // Select example rows to display.
     predictionsLR.select("predictedLabel", "label", "features").show(5)
@@ -273,13 +302,12 @@ object Runner {
 
     // Make predictions.
     val predictionsDT = modelDT.transform(testData)
-    calculateMetrics("DECISION TREE", predictionsDT)
 
     // Select example rows to display.
     predictionsDT.select("predictedLabel", "label", "features").show(5)
 
     val treeModel = modelDT.stages(2).asInstanceOf[DecisionTreeClassificationModel]
-    println(s"Learned classification tree model:\n ${treeModel.toDebugString}")
+//    println(s"Learned classification tree model:\n ${treeModel.toDebugString}")
 
     //RANDOM FOREST CLASSIFIER
     // Train a RandomForest model.
@@ -298,20 +326,18 @@ object Runner {
     // Make predictions.
     val predictionsRF = modelRF.transform(testData)
 
-    calculateMetrics("RANDOM FOREST", predictionsRF)
-
     // Select example rows to display.
     predictionsRF.select("predictedLabel", "label", "features").show(5)
 
     val rfModel = modelRF.stages(2).asInstanceOf[RandomForestClassificationModel]
-    println(s"Learned classification forest model:\n ${rfModel.toDebugString}")
+//    println(s"Learned classification forest model:\n ${rfModel.toDebugString}")
 
     //GRADIENT-BOOSTED TREE CLASSIFIER
     // Train a GBT model.
     val gbt = new GBTClassifier()
       .setLabelCol("indexedLabel")
       .setFeaturesCol("indexedFeatures")
-      .setMaxIter(10)
+      .setMaxIter(ITER_NUM)
       .setFeatureSubsetStrategy("auto")
 
     // Chain indexers and GBT in a Pipeline.
@@ -324,28 +350,44 @@ object Runner {
     // Make predictions.
     val predictionsGBT = modelGBT.transform(testData)
 
-    calculateMetrics("GRADIENT-BOOSTED TREE", predictionsGBT)
-
     // Select example rows to display.
     predictionsGBT.select("predictedLabel", "label", "features").show(5)
 
     val gbtModel = modelGBT.stages(2).asInstanceOf[GBTClassificationModel]
-    println(s"Learned classification GBT model:\n ${gbtModel.toDebugString}")
+//    println(s"Learned classification GBT model:\n ${gbtModel.toDebugString}")
 
+    
+    
+    val schemaAlgoSummary = new StructType()
+      .add(StructField("algo", StringType, false))
+      .add(StructField("count", LongType, false))
+      .add(StructField("correct", LongType, false))
+      .add(StructField("wrong", LongType, false))
+      .add(StructField("ratioCorrect", DoubleType, false))
+      .add(StructField("ratioWrong", DoubleType, false))
+      .add(StructField("accuracy", DoubleType, false))
+      .add(StructField("true positive", LongType, false))
+      .add(StructField("false positive", LongType, false))
+      .add(StructField("true negative", LongType, false))
+      .add(StructField("false negative", LongType, false))    
+    val resAlgoSummary = Seq(calculateMetrics("LOGISTIC REGRESSION", predictionsLR), calculateMetrics("DECISION TREE", predictionsDT), calculateMetrics("RANDOM FOREST", predictionsRF), calculateMetrics("GRADIENT-BOOSTED TREE", predictionsGBT))
+    val dfAlgoSummary = spark.createDataFrame(spark.sparkContext.parallelize(resAlgoSummary), schemaAlgoSummary)
+    dfAlgoSummary.show
+    
     spark.stop()
   }
 
-  def calculateMetrics(algo: String, dfPrediction: DataFrame) {
+  def calculateMetrics(algo: String, dfPrediction: DataFrame): Row = {
     println(s"algo $algo")
     import dfPrediction.sparkSession.implicits._
-    val lp = dfPrediction.select("label", "prediction")
+    val lp = dfPrediction.select("label", "predictedLabel")
     val counttotal = dfPrediction.count()
-    val correct = lp.filter($"label" === $"prediction").count()
-    val wrong = lp.filter(not($"label" === $"prediction")).count()
-    val trueP = lp.filter($"prediction" === 1.0).filter($"label" === $"prediction").count()
-    val falseP = lp.filter($"prediction" === 1.0).filter(not($"label" === $"prediction")).count()
-    val trueN = lp.filter($"prediction" === 0.0).filter($"label" === $"prediction").count()
-    val falseN = lp.filter($"prediction" === 0.0).filter(not($"label" === $"prediction")).count()
+    val correct = lp.filter($"label" === $"predictedLabel").count()
+    val wrong = lp.filter(not($"label" === $"predictedLabel")).count()
+    val trueP = lp.filter($"predictedLabel" === 1.0).filter($"label" === $"predictedLabel").count()
+    val falseP = lp.filter($"predictedLabel" === 1.0).filter(not($"label" === $"predictedLabel")).count()
+    val trueN = lp.filter($"predictedLabel" === 0.0).filter($"label" === $"predictedLabel").count()
+    val falseN = lp.filter($"predictedLabel" === 0.0).filter(not($"label" === $"predictedLabel")).count()
     val ratioWrong = wrong.toDouble / counttotal.toDouble
     val ratioCorrect = correct.toDouble / counttotal.toDouble
     println(s"total:$counttotal, correct:$correct, wrong:$wrong, truP:$trueP, falseP:$falseP, trueN:$trueN, falseN:$falseN, ratioWrong:$ratioWrong, ratioCorrect:$ratioCorrect")
@@ -359,6 +401,7 @@ object Runner {
     println(s"$algo accuracy: " + accuracy)
     println(s"Test Error = ${(1.0 - accuracy)}")
 
+    Row(algo, counttotal, correct, wrong, ratioCorrect, ratioWrong, accuracy, trueP, falseP, trueN, falseN)
   }
 }
 
