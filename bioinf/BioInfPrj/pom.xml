@@ -4,7 +4,7 @@
   <artifactId>BioInfPrj</artifactId>
   <version>0.0.1-SNAPSHOT</version>
   <name>${project.artifactId}</name>
-  <description>My wonderfull scala app</description>
+  <description>Bioinf scala app</description>
   <inceptionYear>2018</inceptionYear>
   <licenses>
     <license>

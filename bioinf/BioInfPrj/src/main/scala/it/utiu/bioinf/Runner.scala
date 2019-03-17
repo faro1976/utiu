@@ -44,17 +44,13 @@ import org.apache.spark.SparkConf
 object Runner {
   //costanti applicative
   var PATH = "hdfs://localhost:9000/bioinf/"  //HDFS path
-//  var PATH = "hdfs://localhost:9000/bioinf/sample/"
-//  var PATH = "/Users/rob/UniNettuno/dataset/tcga-brca/methylation_beta_value/"
-//  var PATH = "/Users/rob/UniNettuno/dataset/tcga-brca/sample/"
-//  var PATH = "/Users/rob/UniNettuno/dataset/tcga-brca/sample2/"
   var ITER_NUM = 3  //numero iterazioni algo ml
  
   
   
   def main(args: Array[String]): Unit = {
     //spark init
-    val conf = new SparkConf().setAppName("Progetto Big Data applicati alla Bioinformatica")//.setMaster("local")    
+    val conf = new SparkConf().setAppName("Progetto Big Data applicati alla Bioinformatica")    
     val spark = SparkSession.builder
       .config(conf)
       .getOrCreate()
@@ -76,7 +72,6 @@ object Runner {
       }
       ret
     }).filter(_ != "").distinct()
-//    val sitesBRCA = rddSites.take(15)
     val sitesBRCA = rddSites.collect()
     println("SITES BRCA length: " + sitesBRCA.length)
 
@@ -146,43 +141,17 @@ object Runner {
     //lettura file analisi metilazione (con lettura autocontenuta mediante wholeTextFiles)
     val rddSampleF = sc.wholeTextFiles(PATH + "*.bed")
     println("sample files to read : " + rddSampleF.count)
-    val rddSample = rddSampleF.map(parseSample)/*.filter(row => {
-      val seq = row.toSeq
-      var containsNaN = false
-      breakable {
-        seq.foreach(f => {
-          if (f.isInstanceOf[Double] && f.asInstanceOf[Double].isNaN) {
-            containsNaN = true
-            break
-          }
-        })
-      }
-      !containsNaN
-    })*/
+    val rddSample = rddSampleF.map(parseSample)
     val dfSample = spark.createDataFrame(rddSample, schemaSample)
-//    println("samples after purging: " + dfSample.count())
 
     val dfJoined = dfMeta.join(dfSample, "manually_curated__opengdc_id")
     println("JOINED DATAFRAME")
-//    dfJoined.show
 
     
     //acquisisco le feature dai siti individuati    
     //converto tutte le feature in un singolo vettore di feature e lo aggiungo come colonna
-//    val assembler = new VectorAssembler().setInputCols(sitesBRCA).setOutputCol("tmpFeatures").setHandleInvalid("keep")
-        val assembler = new VectorAssembler().setInputCols(sitesBRCA).setOutputCol("features").setHandleInvalid("keep")
-    val dfFeatures = assembler.transform(dfJoined)
-    
-//    //uso PCA for dimensionality reduction
-//    //creo dataframe con colonne feature vector (tmpFeatures) e PCA feature vector (features)
-//        val pca = new PCA()
-//      .setInputCol("tmpFeatures")
-//      .setOutputCol("features")
-//      .setK(5)
-//      .fit(dfFeatures)
-//      val dfExtended = pca.transform(dfFeatures).cache
-//    println("pca feature columns: "/*+ dfExtended.select("features").first().get(0).asInstanceOf[DenseVector].size*/)
-    val dfExtended = dfFeatures.cache
+    val assembler = new VectorAssembler().setInputCols(sitesBRCA).setOutputCol("features").setHandleInvalid("keep")
+    val dfExtended = assembler.transform(dfJoined).cache
     
     
     //  split the dataframe into training and test data
@@ -218,7 +187,6 @@ object Runner {
     //-Logistic regression
     //-Decision trees (So under the hood, Apache Spark calls the random forest with one tree.)
     //-Random forests
-    //-Gradient-boosted trees
 
     //LOGISTIC REGRESSION CLASSIFIER
     val lr = new LogisticRegression().setMaxIter(ITER_NUM).setRegParam(0.3).setElasticNetParam(0.8)
@@ -252,19 +220,6 @@ object Runner {
     val predictionsRF = modelRF.transform(testData)
     predictionsRF.select("predictedLabel", "label", "features").show(5)
     val rfModel = modelRF.stages(2).asInstanceOf[RandomForestClassificationModel]
-
-//    //GRADIENT-BOOSTED TREE CLASSIFIER
-//    val gbt = new GBTClassifier()
-//      .setLabelCol("indexedLabel")
-//      .setFeaturesCol("indexedFeatures")
-//      .setMaxIter(ITER_NUM)
-//      .setFeatureSubsetStrategy("auto")
-//    val pipelineGBT = new Pipeline()
-//      .setStages(Array(labelIndexer, featureIndexer, gbt, labelConverter))
-//    val modelGBT = pipelineGBT.fit(trainingData)
-//    val predictionsGBT = modelGBT.transform(testData)
-//    predictionsGBT.select("predictedLabel", "label", "features").show(5)
-//    val gbtModel = modelGBT.stages(2).asInstanceOf[GBTClassificationModel]
 
     
     //definizione schema dataframe per comparazione risultati algo ML     
