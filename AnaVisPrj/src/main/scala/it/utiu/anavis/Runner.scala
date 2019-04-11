@@ -1,6 +1,8 @@
 package it.utiu.anavis
 
 import java.io.BufferedWriter
+
+
 import java.io.FileWriter
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -22,6 +24,8 @@ import org.apache.spark.sql.Row
 import org.apache.spark.sql.types.DoubleType
 import org.apache.spark.ml.feature.VectorAssembler
 import org.apache.spark.sql.types.StringType
+import org.apache.spark.sql.catalyst.expressions.IsNaN
+
 
 object Runner {
   //costanti applicative
@@ -46,8 +50,16 @@ object Runner {
     //popolamento RDD con dati delle transazioni Bitcoin in formato json 
     val rddTxs = sc.textFile(PATH + "*.json").map(r => {
       val jsonTx = jsonParser.parse(r).getAsJsonObject
-      new Transaction(jsonTx.get("hash").getAsString, new Date(jsonTx.get("block_timestamp").getAsLong*1000), jsonTx.get("input_count").getAsInt, jsonTx.get("output_count").getAsInt, jsonTx.get("fee").getAsDouble, jsonTx.get("output_value").getAsDouble)
+      new Transaction(jsonTx.get("hash").getAsString, new Date(jsonTx.get("block_timestamp").getAsLong*1000), jsonTx.get("input_count").getAsInt, jsonTx.get("output_count").getAsInt, jsonTx.get("fee").getAsDouble, jsonTx.get("output_value").getAsDouble, jsonTx.get("size").getAsLong)
     }).cache()
+    //estrazione csv dati non aggregati delle transazioni limitatamente a un determinato sottoperiodo
+    //riga csv: timestamp, hash, fee, outputValue, size
+    var lst0 = new ListBuffer[Array[String]]()
+    //trasporto su memoria driver del dataset
+    rddTxs.take(10).foreach(t=>println(t.fee))
+    rddTxs.collect().foreach(t=>lst0.append(Array(sdf.format(t.timestamp.toString), t.hash, t.fee.toString, t.outputValue.toString, t.size.toString)))
+    writeCSV("transactions.csv", lst0.toList)
+    
      
 //    rddTxs.collect().foreach(println)
     println(rddTxs.count)
@@ -58,8 +70,10 @@ object Runner {
     //riga csv: timestamp, total_transactions, total_amount, average_amount, fee_average
     rddDailyStats.collect().foreach(t=>lst1.append(Array(t._1, t._2._1.toString(), t._2._2.toString(), t._2._3.toString(), t._2._4.toString)))
     writeCSV("dailyTransactions.csv", lst1.toList)
+     
 
     
+    //caricamento dati pricing Bitcoin e aggregazione con media per data 
     //restituisce RDD: timestamp, price
     var rddDailyPriceInit = sc.textFile(PATH+"coinbaseUSD_1-min_data_2014-12-01_to_2019-01-09.csv")
     val header = rddDailyPriceInit.first()
@@ -75,7 +89,8 @@ object Runner {
     
     //join transaction statistics and daily price by date
     //resituisce RDD: timestamp, price, total_transactions, total_amount, average_amount, average_fee 
-    val rddJoined = rddDailyStats.join(rddDailyPrice).map(e=>Row(e._1,e._2._2,e._2._1._1,e._2._1._2,e._2._1._3,e._2._1._4))
+    val rddJoined = rddDailyStats.join(rddDailyPrice)
+        .map(e=>Row(e._1,e._2._2,e._2._1._1,e._2._1._2,e._2._1._3,e._2._1._4))        
     
     val schema = new StructType()
       .add(StructField("timestamp", StringType, false))
@@ -83,12 +98,14 @@ object Runner {
       .add(StructField("totTransactions", DoubleType, false))
       .add(StructField("totAmount", DoubleType, false))
       .add(StructField("avgAmount", DoubleType, false))
-      .add(StructField("avgFee", DoubleType, false))
+      .add(StructField("avgFee", DoubleType, false))      
       
-    val df = spark.createDataFrame(rddJoined, schema)
+    val df = spark.createDataFrame(rddJoined, schema).na.drop()
     val assembler = new VectorAssembler().setInputCols(Array("totTransactions","totAmount","avgAmount","avgFee")).setOutputCol("features")
-    val training = assembler.transform(df).cache
-    println(training.count())
+    val dfML = assembler.transform(df).cache()
+    val Array(training, test) = dfML.randomSplit(Array(0.7, 0.3), 123)
+    println("training count:"+training.count())
+    println("test count:"+test.count())
     training.show()
 
     val lr = new LinearRegression()
@@ -113,6 +130,9 @@ object Runner {
     println(s"RMSE: ${trainingSummary.rootMeanSquaredError}")
     println(s"r2: ${trainingSummary.r2}")    
     
+    
+    val predictions = lrModel.transform(test)
+    predictions.show()
     
     spark.stop()
     
