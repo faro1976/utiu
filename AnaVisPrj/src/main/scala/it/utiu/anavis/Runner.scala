@@ -55,10 +55,12 @@ object Runner {
     //estrazione csv dati non aggregati delle transazioni limitatamente a un determinato sottoperiodo
     //riga csv: timestamp, hash, fee, outputValue, size
     var lst0 = new ListBuffer[Array[String]]()
-    //trasporto su memoria driver del dataset
+    //header
+    lst0.append(Array("date", "hash", "fee", "output_value", "size"))
+    //trasporto su memoria driver dell'intero dataset delle transazioni
     rddTxs.take(10).foreach(t=>println(t.fee))
     rddTxs.collect().foreach(t=>lst0.append(Array(sdf.format(t.timestamp.toString), t.hash, t.fee.toString, t.outputValue.toString, t.size.toString)))
-    writeCSV("transactions.csv", lst0.toList)
+    writeCSV("allTransactions.csv", lst0.toList)
     
      
 //    rddTxs.collect().foreach(println)
@@ -67,8 +69,9 @@ object Runner {
     //restituisce RDD: numero transazioni confermate in blockchain, volume transato totale, volume transato medio, fee media
     val rddDailyStats = rddTxs.map(t=>(sdf.format(t.timestamp), t)).groupByKey().map(t=>(t._1, (t._2.size.toDouble, t._2.map(t2=>t2.outputValue).sum.toDouble,  t._2.map(t2=>t2.outputValue).sum/t._2.size, t._2.map(t2=>t2.outputValue).sum/t._2.size)))
     var lst1 = new ListBuffer[Array[String]]()
-    //riga csv: timestamp, total_transactions, total_amount, average_amount, fee_average
-    rddDailyStats.collect().foreach(t=>lst1.append(Array(t._1, t._2._1.toString(), t._2._2.toString(), t._2._3.toString(), t._2._4.toString)))
+    //header
+    lst1.append(Array("date", "total_transactions", "total_amount", "average_amount", "fee_average"))    
+    rddDailyStats.collect().foreach(t=>lst1.append(Array(t._1, t._2._1.toString(), t._2._2.toString(), t._2._3.toString(), t._2._4.toString)))    
     writeCSV("dailyTransactions.csv", lst1.toList)
      
 
