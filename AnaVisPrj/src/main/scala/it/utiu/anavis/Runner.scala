@@ -25,14 +25,17 @@ import org.apache.spark.sql.types.DoubleType
 import org.apache.spark.ml.feature.VectorAssembler
 import org.apache.spark.sql.types.StringType
 import org.apache.spark.sql.catalyst.expressions.IsNaN
+import java.text.DecimalFormat
 
 
 object Runner {
   //costanti applicative
-//  var PATH = "hdfs://localhost:9000/bioinf/"  //HDFS path
-  var PATH = "/Users/rob/tmp/blockchain2017/"
-  val sdf = new SimpleDateFormat("yyMMddhh")
-  val sdfm = new SimpleDateFormat("yyMMddhhmm")
+//  val PATH = "hdfs://localhost:9000/bioinf/"  //HDFS path
+  val PATH="/Users/rob/tmp/blockchain/"
+  val sdf = new SimpleDateFormat("yyyyMMddhh")
+//  val sdfm = new SimpleDateFormat("yyMMddhhmm")
+  val decF = new DecimalFormat("#.####");
+
   
   val jsonParser = new JsonParser()
   
@@ -52,27 +55,22 @@ object Runner {
       val jsonTx = jsonParser.parse(r).getAsJsonObject
       new Transaction(jsonTx.get("hash").getAsString, new Date(jsonTx.get("block_timestamp").getAsLong*1000), jsonTx.get("input_count").getAsInt, jsonTx.get("output_count").getAsInt, jsonTx.get("fee").getAsDouble, jsonTx.get("output_value").getAsDouble, jsonTx.get("size").getAsLong)
     }).cache()
-    //estrazione csv dati non aggregati delle transazioni limitatamente a un determinato sottoperiodo
-    //riga csv: timestamp, hash, fee, outputValue, size
-    var lst0 = new ListBuffer[Array[String]]()
-    //header
-    lst0.append(Array("date", "hash", "fee", "output_value", "size"))
-    //trasporto su memoria driver dell'intero dataset delle transazioni
-    rddTxs.take(10).foreach(t=>println(t.fee))
-    rddTxs.collect().foreach(t=>lst0.append(Array(sdf.format(t.timestamp.toString), t.hash, t.fee.toString, t.outputValue.toString, t.size.toString)))
-    writeCSV("allTransactions.csv", lst0.toList)
+//    //estrazione csv dati non aggregati delle transazioni limitatamente a un determinato sottoperiodo
+//    //riga csv: timestamp, hash, fee, outputValue, size
+//    var lst0 = new ListBuffer[Array[String]]()
+//    //header
+//    lst0.append(Array("date", "hash", "fee", "output_value", "size"))
+//    //trasporto su memoria driver dell'intero dataset delle transazioni
+//    rddTxs.take(10).foreach(t=>println(t.fee))
+//    rddTxs.collect().foreach(t=>lst0.append(Array(sdf.format(t.timestamp), t.hash, t.fee.toString, t.outputValue.toString, t.size.toString)))
+//    writeCSV("csv/allTransactions.csv", lst0.toList)
     
      
 //    rddTxs.collect().foreach(println)
-    println(rddTxs.count)
+    println("total number of transactions: "+rddTxs.count)
 
     //restituisce RDD: numero transazioni confermate in blockchain, volume transato totale, volume transato medio, fee media
     val rddDailyStats = rddTxs.map(t=>(sdf.format(t.timestamp), t)).groupByKey().map(t=>(t._1, (t._2.size.toDouble, t._2.map(t2=>t2.outputValue).sum.toDouble,  t._2.map(t2=>t2.outputValue).sum/t._2.size, t._2.map(t2=>t2.outputValue).sum/t._2.size)))
-    var lst1 = new ListBuffer[Array[String]]()
-    //header
-    lst1.append(Array("date", "total_transactions", "total_amount", "average_amount", "fee_average"))    
-    rddDailyStats.collect().foreach(t=>lst1.append(Array(t._1, t._2._1.toString(), t._2._2.toString(), t._2._3.toString(), t._2._4.toString)))    
-    writeCSV("dailyTransactions.csv", lst1.toList)
      
 
     
@@ -86,25 +84,31 @@ object Runner {
         //restituisce Row: data, prezzo cambio USD
         (sdf.format(new Date(values(0).toLong*1000)), values(4).toDouble)
         }).groupByKey().map(p=>(p._1, p._2.sum/p._2.size))
-    var lst2 = new ListBuffer[Array[String]]()        
-    rddDailyPrice.collect().foreach(p=>lst2.append(Array(p._1, p._2.toString())))
-    writeCSV("dailyPrice.csv", lst2.toList)
+        
     
     //join transaction statistics and daily price by date
     //resituisce RDD: timestamp, price, total_transactions, total_amount, average_amount, average_fee 
     val rddJoined = rddDailyStats.join(rddDailyPrice)
-        .map(e=>Row(e._1,e._2._2,e._2._1._1,e._2._1._2,e._2._1._3,e._2._1._4))        
+        .map(e=>Row(e._1,e._2._2,e._2._1._1,e._2._1._2,e._2._1._3,e._2._1._4))
+                
     
     val schema = new StructType()
-      .add(StructField("timestamp", StringType, false))
+      .add(StructField("date", StringType, false))
       .add(StructField("price", DoubleType, false))
-      .add(StructField("totTransactions", DoubleType, false))
-      .add(StructField("totAmount", DoubleType, false))
-      .add(StructField("avgAmount", DoubleType, false))
-      .add(StructField("avgFee", DoubleType, false))      
+      .add(StructField("total_transactions", DoubleType, false))
+      .add(StructField("total_amount", DoubleType, false))
+      .add(StructField("average_amount", DoubleType, false))
+      .add(StructField("average_fee", DoubleType, false))      
       
     val df = spark.createDataFrame(rddJoined, schema).na.drop()
-    val assembler = new VectorAssembler().setInputCols(Array("totTransactions","totAmount","avgAmount","avgFee")).setOutputCol("features")
+    
+    var lstStats = new ListBuffer[Array[String]]()
+    //header
+    lstStats.append(Array("date", "price", "total_transactions", "total_amount", "average_amount", "average_fee"))    
+    df.sort("date").collect().foreach(r=>lstStats.append(Array(r.get(0).toString(),decF.format(r.get(1)),r.get(2).toString(),r.get(3).toString(),decF.format(r.get(4)),decF.format(r.get(5)))))    
+    writeCSV("web/csv/dailyStats.csv", lstStats.toList)
+    
+    val assembler = new VectorAssembler().setInputCols(Array("total_transactions","total_amount","average_amount","average_fee")).setOutputCol("features")
     val dfML = assembler.transform(df).cache()
     val Array(training, test) = dfML.randomSplit(Array(0.7, 0.3), 123)
     println("training count:"+training.count())
@@ -136,6 +140,12 @@ object Runner {
     
     val predictions = lrModel.transform(test)
     predictions.show()
+    var lstPreds = new ListBuffer[Array[String]]()
+    //header
+    lstPreds.append(Array("date", "price", "predictedPrice"))    
+    predictions.sort("date").collect().foreach(r=>lstPreds.append(Array(r.get(0).toString(),decF.format(r.get(1)),decF.format(r.get(7)))))    
+    writeCSV("web/csv/predictions.csv", lstPreds.toList)
+    
     
     spark.stop()
     
@@ -143,7 +153,7 @@ object Runner {
   
   private def writeCSV(fileName: String, values: List[Array[String]]) {
     val outputFile = new BufferedWriter(new FileWriter("./"+fileName))
-    val csvWriter = new CSVWriter(outputFile)
+    val csvWriter = new CSVWriter(outputFile, ',', CSVWriter.NO_QUOTE_CHARACTER)
     csvWriter.writeAll(values)
     outputFile.close()
   }

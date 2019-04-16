@@ -1,6 +1,4 @@
 <!DOCTYPE html>
-<meta charset="utf-8">
-<meta charset='utf-8'>
 <html>
   <head>
   <script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
@@ -35,7 +33,7 @@ var margin = {top: 30, right: 40, bottom: 30, left: 50},
     width = 600 - margin.left - margin.right,
     height = 270 - margin.top - margin.bottom;
 
-var parseDate = d3.time.format("%Y%m%d").parse;
+var parseDate = d3.time.format("%Y%m%d%H").parse;
 
 var x = d3.time.scale().range([0, width]);
 var y0 = d3.scale.linear().range([height, 0]);
@@ -56,7 +54,7 @@ var valueline = d3.svg.line()
     
 var valueline2 = d3.svg.line()
     .x(function(d) { return x(d.date); })
-    .y(function(d) { return y1(d.average_price); });
+    .y(function(d) { return y1(d.price); });
   
 var svg = d3.select("body")
     .append("svg")
@@ -66,18 +64,16 @@ var svg = d3.select("body")
         .attr("transform", 
               "translate(" + margin.left + "," + margin.top + ")");
 
-d3.csv("dailyTransactions.csv", function(error, data) {
+d3.csv("../csv/dailyStats.csv", function(error, data) {
     data.forEach(function(d) {
         d.date = parseDate(d.date);
-        d.total_transactions = +d.total_transactions;
-        d.average_price = +d.average_price;
     });
 
     x.domain(d3.extent(data, function(d) { return d.date; }));
     y0.domain([0, d3.max(data, function(d) {
 		return Math.max(d.total_transactions); })]); 
     y1.domain([0, d3.max(data, function(d) { 
-		return Math.max(d.average_price); })]);
+		return Math.max(d.price); })]);
 
     svg.append("path")        // Add the valueline path.
         .attr("d", valueline(data));
