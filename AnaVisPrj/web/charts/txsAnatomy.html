@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<meta charset='utf-8'>
+<html>
+  <head>
+    <script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
+    <style type="text/css">
+.axis path,
+.axis line {
+  fill: none;
+	stroke: black;
+	shape-rendering: crispEdges;
+}
+.axis text {
+	font-family: sans-serif;
+	font-size: 11px;
+}    
+    </style>
+  </head>
+  <body>
+<script>
+d3.csv('../csv/txsAnatomy.csv', function (data) {
+	  // Variables
+	  var body = d3.select('body')
+		var margin = { top: 50, right: 50, bottom: 50, left: 100 }
+		var h = 500 - margin.top - margin.bottom
+		var w = 500 - margin.left - margin.right
+		var formatPercent = d3.format('.2%')
+		// Scales
+	  var colorScale = d3.scale.category20()
+	  var xScale = d3.scale.linear()
+	    .domain([
+	    	d3.min([0,d3.min(data,function (d) { return d.output_count })]),
+	    	d3.max([0,d3.max(data,function (d) { return d.output_count })])
+	    	])
+	    .range([0,w])
+	  var yScale = d3.scale.linear()
+	    .domain([
+	    	d3.min([0,d3.min(data,function (d) { return d.input_count })]),
+	    	d3.max([0,d3.max(data,function (d) { return d.input_count })])
+	    	])
+	    .range([h,0])
+		// SVG
+		var svg = body.append('svg')
+		    .attr('height',h + margin.top + margin.bottom)
+		    .attr('width',w + margin.left + margin.right)
+		  .append('g')
+		    .attr('transform','translate(' + margin.left + ',' + margin.top + ')')
+		// X-axis
+		var xAxis = d3.svg.axis()
+		  .scale(xScale)
+		  .orient('bottom')
+	  // Y-axis
+		var yAxis = d3.svg.axis()
+		  .scale(yScale)
+		  .orient('left')
+	  // Circles
+	  var circles = svg.selectAll('circle')
+	      .data(data)
+	      .enter()
+	    .append('circle')
+	      .attr('cx',function (d) { return xScale(d.output_count) })
+	      .attr('cy',function (d) { return yScale(d.input_count) })
+	      .attr('r','1')
+	      .attr('stroke','black')
+	      .attr('stroke-width',1)
+	      .attr('fill',function (d,i) { return colorScale(i) })
+	      .on('mouseover', function () {
+	        d3.select(this)
+	          .transition()
+	          .duration(500)
+	          .attr('r',5)
+	          .attr('stroke-width',3)
+	      })
+	      .on('mouseout', function () {
+	        d3.select(this)
+	          .transition()
+	          .duration(500)
+	          .attr('r',10)
+	          .attr('stroke-width',1)
+	      })
+	    .append('title') // Tooltip
+	      .text(function (d) { return d.hash +
+	                           '\nReturn: ' + formatPercent(d.input_count) +
+	                           '\nStd. Dev.: ' + formatPercent(d.output_count) })
+	  // X-axis
+	  svg.append('g')
+	      .attr('class','axis')
+	      .attr('transform', 'translate(0,' + h + ')')
+	      .call(xAxis)
+	    .append('text') // X-axis Label
+	      .attr('class','label')
+	      .attr('y',-10)
+	      .attr('x',w)
+	      .attr('dy','.71em')
+	      .style('text-anchor','end')
+	      .text('outputs counter')
+	  // Y-axis
+	  svg.append('g')
+	      .attr('class', 'axis')
+	      .call(yAxis)
+	    .append('text') // y-axis Label
+	      .attr('class','label')
+	      .attr('transform','rotate(-90)')
+	      .attr('x',0)
+	      .attr('y',5)
+	      .attr('dy','.71em')
+	      .style('text-anchor','end')
+	      .text('inputs counter')
+	})
+</script>
+  </body>
+</html>
