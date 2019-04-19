@@ -25,7 +25,6 @@ import org.apache.spark.sql.types.Metadata
 object Runner {
   //costanti applicative
   val PATH = "hdfs://localhost:9000/blockchain/"  //HDFS path
-//  val PATH="/Users/rob/tmp/blockchain/"
   val DATE_PATTERN = "yyyyMMdd"
 //  val sdfm = new SimpleDateFormat("yyMMddhhmm")
   val decF = new DecimalFormat("#.####");  

@@ -77,7 +77,7 @@ d3.csv("../csv/predictions.csv", function(error, data) {
     d.predictedPrice = +d.predictedPrice;
   });
 
-  var cities = color.domain().map(function(name) {
+  var cols = color.domain().map(function(name) {
     return {
       name: name,
       values: data.map(function(d) {
@@ -89,8 +89,8 @@ d3.csv("../csv/predictions.csv", function(error, data) {
   x.domain(d3.extent(data, function(d) { return d.date; }));
 
   y.domain([
-    d3.min(cities, function(c) { return d3.min(c.values, function(v) { return v.price; }); }),
-    d3.max(cities, function(c) { return d3.max(c.values, function(v) { return v.price; }); })
+    d3.min(cols, function(c) { return d3.min(c.values, function(v) { return v.price; }); }),
+    d3.max(cols, function(c) { return d3.max(c.values, function(v) { return v.price; }); })
   ]);
 
   svg.append("g")
@@ -108,18 +108,18 @@ d3.csv("../csv/predictions.csv", function(error, data) {
       .style("text-anchor", "end")
       .text("USD");
 
-  var city = svg.selectAll(".city")
-      .data(cities)
+  var cls = svg.selectAll(".cls")
+      .data(cols)
     .enter().append("g")
-      .attr("class", "city");
+      .attr("class", "cls");
 
-  city.append("path")
+  cls.append("path")
       .attr("class", "line")
       .attr("d", function(d) { return line(d.values); })
       .attr("data-legend",function(d) { return d.name})
       .style("stroke", function(d) { return color(d.name); });
 
-  city.append("text")
+  cls.append("text")
       .datum(function(d) { return {name: d.name, value: d.values[d.values.length - 1]}; })
       .attr("transform", function(d) { return "translate(" + x(d.value.date) + "," + y(d.value.price) + ")"; })
       .attr("x", 3)

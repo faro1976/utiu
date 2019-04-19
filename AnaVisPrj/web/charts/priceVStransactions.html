@@ -29,7 +29,7 @@
 
 <script>
 
-var margin = {top: 30, right: 40, bottom: 30, left: 100},
+var margin = {top: 30, right: 80, bottom: 30, left: 100},
     width = 600 - margin.left - margin.right,
     height = 270 - margin.top - margin.bottom;
 
@@ -75,14 +75,14 @@ d3.csv("../csv/dailyStats.csv", function(error, data) {
     y1.domain([0, d3.max(data, function(d) { 
 		return Math.max(d.price); })]);
 
-    svg.append("path")        // Add the valueline path.
+    svg.append("path")
         .attr("d", valueline(data));
 
-    svg.append("path")        // Add the valueline2 path.
+    svg.append("path")
         .style("stroke", "red")
         .attr("d", valueline2(data));
 
-    svg.append("g")            // Add the X Axis
+    svg.append("g")
         .attr("class", "x axis")
         .attr("transform", "translate(0," + height + ")")
         .call(xAxis);
