@@ -5,34 +5,24 @@ import java.io.FileWriter
 import java.text.DecimalFormat
 import java.text.SimpleDateFormat
 import java.util.Date
-import scala.collection.JavaConversions.seqAsJavaList
-import scala.collection.mutable.ListBuffer
-import org.apache.spark.SparkConf
-import org.apache.spark.ml.feature.VectorAssembler
-import org.apache.spark.ml.regression.LinearRegression
-import org.apache.spark.sql.Row
-import org.apache.spark.sql.SparkSession
-import org.apache.spark.sql.types.DoubleType
-import org.apache.spark.sql.types.StringType
-import org.apache.spark.sql.types.StructField
-import org.apache.spark.sql.types.StructType
-import com.google.gson.JsonParser
-import au.com.bytecode.opencsv.CSVWriter
-import org.apache.spark.sql.types.Metadata
-import com.google.gson.JsonParser
 
+import scala.collection.JavaConversions.seqAsJavaList
+
+import org.apache.spark.SparkConf
+import org.apache.spark.sql.SparkSession
+
+import au.com.bytecode.opencsv.CSVWriter
+import org.apache.spark.sql.Row
 
 
 object PredictionJob {
   //costanti applicative
-//  val PATH = "hdfs://localhost:9000/blockchain/"  //HDFS path
-  val PATH = "/Users/rob/UniNettuno/dataset/bitcoin/"
-  val DATE_PATTERN = "yyyyMMdd"
+  val PATH = "hdfs://localhost:9000/bitcoin/"  //HDFS path
 //  val sdfm = new SimpleDateFormat("yyMMddhhmm")
   val decF = new DecimalFormat("#.####");  
-  val jsonParser = new JsonParser()
   val sdf1 = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss")
   val sdf2 = new SimpleDateFormat("yyyy-MM-dd")
+  val sdf3 = new SimpleDateFormat("hh")
   
   
   
@@ -51,14 +41,20 @@ object PredictionJob {
     //popolamento RDD con dati delle transazioni Bitcoin in formato CSV     
     val rddTxsRaw = sc.textFile(PATH+"transactions/*.csv")
     val rddTxsHead = rddTxsRaw.first()
-    val rddTxs = rddTxsRaw.filter(row => row != rddTxsHead)
+    val rddTxs = rddTxsRaw.filter(row => row != rddTxsHead).filter(line=>line.split(",")(6).length()>0)
       .map(line=>{
         val values = line.split(",")
         //input: _id,fee,h,segwit,size,t,tfs,vol,vsize,weight,wfee,hash
-        //output: _id,fee,h,segwit,size,t,tfs,t_str,vol,hash
-        (sdf2.format(sdf1.parse(values(6))), (values(0),values(1),values(2),values(3),values(4),values(5),values(6),values(7),values(11)))
-    })
+        //output: _id,fee,h,segwit,size,t,tfs,vol,hash,confTime,hourOfDay
+        val t = sdf1.parse(values(5)).getTime
+        val tfs = sdf1.parse(values(6)).getTime    
+        (
+            sdf2.format(sdf1.parse(values(6))), 
+            (values(0),values(1),values(2),values(3),values(4),t, tfs, values(7),values(11), t-tfs, sdf3.format(sdf1.parse(values(6)))))
+    }).filter(t=>t._2._7>0)
     println("total number of transactions: "+rddTxs.count)
+    
+    rddTxs.first()
     
     
     //caricamento dati pricing Bitcoin e aggregazione per data con calcolo della media prezzo giornaliera 
@@ -69,15 +65,15 @@ object PredictionJob {
       .map(line=>{
         val values = line.split(",")
         //restituisce Row: data, prezzo cambio USD medio giornaliero
-        (new SimpleDateFormat(DATE_PATTERN).format(new Date(values(0).toLong*1000)), values(4).toDouble)
+        (sdf2.format(new Date(values(0).toLong*1000)), values(4).toDouble)
         }).filter(!_._2.isNaN()).groupByKey().map(p=>(p._1, p._2.sum/p._2.size))
     println("total number of days in dailyPrice RDD: "+rddDailyPrice.count)    
     
     
     //join per data degli RDDs statistiche transazioni giornaliere e quotazioni Bitcoin giornaliere
-    //resituisce RDD: _id,fee,h,segwit,size,t,tfs,vol,hash,price      timestamp, price, total_transactions, total_amount, average_amount, average_fee 
+    //resituisce RDD: _id,fee,h,segwit,size,t,tfs,vol,hash,confTime,hourOfDay,price 
     val rddJoined = rddTxs.join(rddDailyPrice)
-        .map(e=>Row(e._1,e._2._1._1,e._2._1._2,e._2._1._3,e._2._1._4,e._2._1._5,e._2._1._6,e._2._1._7,e._2._1._8,e._2._1._9, e._2._2))
+        .map(t=>(t._2._1._1,t._2._1._2,t._2._1._3,t._2._1._4,t._2._1._5,t._2._1._6,t._2._1._7,t._2._1._8,t._2._1._9,t._2._1._10,t._2._1._11,t._2._2))
     
     rddJoined.first()
 //                

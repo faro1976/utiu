@@ -35,7 +35,7 @@ object Runner {
   def main(args: Array[String]): Unit = {
     //spark init
     val conf = new SparkConf().setAppName("Progetto Big Data Analytics and Visualization")
-//    .setMaster("local")
+    .setMaster("local")
     val spark = SparkSession.builder
       .config(conf)
       .getOrCreate()
