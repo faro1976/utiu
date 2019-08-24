@@ -89,7 +89,16 @@
 	    <artifactId>guava</artifactId>
 	    <version>15.0</version>
 	</dependency>	   
+
+	<!-- Alpakka -->
+  <dependency>
+  	<groupId>com.typesafe.akka</groupId>
+	<artifactId>akka-stream-kafka_2.11</artifactId>
+    <version>1.0.5</version>
+  </dependency>  
+
   </dependencies>
+  
 
   <build>
     <sourceDirectory>src/main/scala</sourceDirectory>

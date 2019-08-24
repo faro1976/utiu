@@ -12,17 +12,10 @@ import org.apache.spark.ml.feature.VectorAssembler
 import org.apache.spark.ml.regression.LinearRegression
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.SparkSession
-import org.apache.spark.sql.types.DoubleType
-import org.apache.spark.sql.types.StringType
-import org.apache.spark.sql.types.StructField
-import org.apache.spark.sql.types.StructType
 import com.google.gson.JsonParser
 import au.com.bytecode.opencsv.CSVWriter
-import org.apache.spark.sql.types.Metadata
-import org.apache.spark.sql.types.BooleanType
-import org.apache.spark.sql.types.IntegerType
-import org.apache.spark.sql.types.LongType
-import org.apache.spark.sql.functions.col
+import org.apache.spark.sql.types._
+import org.apache.spark.sql.functions._
 
 
 
@@ -51,7 +44,7 @@ object PredictionJob {
 
     
     //popolamento RDD con dati delle transazioni Bitcoin in formato CSV     
-//    val rddTxsRaw = sc.textFile(PATH+"transactions/*.csv")
+//    val rddTxsRaw = sc.textFile(PATH+"large/*.csv")
     val rddTxsRaw = sc.textFile(PATH+"transactions/rob.csv")
     val rddTxsHead = rddTxsRaw.first()
     val rddTxs = rddTxsRaw.filter(row => row != rddTxsHead).filter(line=>line.split(",")(6).length()>0)
@@ -110,7 +103,8 @@ object PredictionJob {
 
       //algoritmo di machine learning supervisionato per predizione tempo conferma Bitcoin mediante regressione lineare
     //definizione vettore di features
-    val assembler = new VectorAssembler().setInputCols(Array("fee","segwit","size","t","tfs","vol","hourOfDay","price")).setOutputCol("features")
+//    val assembler = new VectorAssembler().setInputCols(Array("fee","segwit","size","vol","hourOfDay","price")).setOutputCol("features")
+    val assembler = new VectorAssembler().setInputCols(Array("fee","size")).setOutputCol("features")
     val dfML = assembler.transform(df).cache()
     
     
@@ -145,11 +139,16 @@ object PredictionJob {
     
     
     //applicazione modello su dati di test e valorizzazione predittori
-    println(new Date())
     val predictions = lrModel.transform(test)    
-    println(new Date())
-    predictions.withColumn("diff", col("confTime")-col("predictedConfTime")).show
-//    predictions.show()
+    val extPredictions = predictions      
+      .withColumn("~predictedCT", predictions.col("predictedConfTime").cast("Decimal(10,0)"))
+      .withColumn("sConfTime", col("confTime")/1000)
+      .withColumn("sDiff", abs(col("confTime")-col("predictedConfTime")) / 1000  )
+      .withColumn("%Diff", col("sDiff") / col("sConfTime") * 100  )
+
+      
+    extPredictions.show
+    println(extPredictions.agg(avg("%Diff")).first.get(0))  
     
     
     
