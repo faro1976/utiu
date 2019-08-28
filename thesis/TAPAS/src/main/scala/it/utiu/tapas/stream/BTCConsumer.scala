@@ -15,50 +15,40 @@ import org.apache.kafka.common.serialization.StringDeserializer
 import akka.actor.ActorSystem
 import scala.concurrent.Future
 import akka.stream.scaladsl.Sink
+import org.apache.kafka.clients.producer.ProducerRecord
+import akka.kafka.ProducerMessage
+import akka.stream.scaladsl.Keep
+import akka.kafka.scaladsl.Producer
+import akka.kafka.scaladsl.Consumer.DrainingControl
+import akka.stream.ActorMaterializer
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.ExecutionContext
 
-class BTCConsumer {
-  val topic="test"
-  val kafkaBootstrapServers="localhost"
+object BTCConsumer {
+  val topic1 = "test"
+  val kafkaBootstrapServers = "localhost"
   val groupId = "group1"
-  
-  val actorSystem = ActorSystem("rob")
-  
-// configure Kafka consumer (1)
-val kafkaConsumerSettings = ConsumerSettings(actorSystem, new IntegerDeserializer, new StringDeserializer)
-  .withBootstrapServers(kafkaBootstrapServers)
-  .withGroupId(groupId)
-  .withProperty(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest")
-  .withStopTimeout(0.seconds)  
 
-Consumer.committableSource(kafkaConsumerSettings, Subscriptions.topics(topic))
-.mapAsync(10)(msg =>
-  Future.successful(msg.toString(), msg.committableOffset))
-  .runWith(Sink.ignore)
- 
-}  
-  
-val control: Consumer.DrainingControl[Done] = Consumer
-  .committableSource(kafkaConsumerSettings, Subscriptions.topics(topic)) // (5)
-  .asSourceWithContext(_.committableOffset) // (6)
-  .map(_.record)
-  .map { consumerRecord => // (7)
-    println(consumerRecord)
-//    val movie = consumerRecord.value().parseJson.convertTo[Movie]
-//    WriteMessage.createUpsertMessage(movie.id.toString, movie)
+  def main(args: Array[String]): Unit = {
+    implicit val system: ActorSystem = ActorSystem("rob")
+    implicit val materializer: ActorMaterializer = ActorMaterializer()
+    implicit val executionContext: ExecutionContext = system.dispatcher
+
+    val consumerSettings = ConsumerSettings(system, new ByteArrayDeserializer, new StringDeserializer)
+      .withBootstrapServers("localhost:9092")
+      .withGroupId(groupId)
+      .withProperty(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest")
+
+    val done =
+      Consumer.committableSource(consumerSettings, Subscriptions.topics(topic1))
+        .mapAsync(1) { msg =>
+          println(msg)
+          println(msg.record.key+":"+msg.record.value)
+          msg.committableOffset.commitScaladsl()
+        }
+        .runWith(Sink.ignore)
+
+    done.onComplete(_ => system.terminate())
   }
-//  .via(ElasticsearchFlow.createWithContext(indexName, "_doc")) // (8)
-//  .map { writeResult => // (9)
-//    writeResult.error.foreach { errorJson =>
-//      throw new RuntimeException(s"Elasticsearch update failed ${writeResult.errorReason.getOrElse(errorJson)}")
-//    }
-//    NotUsed
-//  }
-//  .asSource // (10)
-//  .map {
-//    case (_, committableOffset) =>
-//      committableOffset
-//  }
-//  .toMat(Committer.sink(CommitterSettings(actorSystem)))(Keep.both) // (11)
-//  .mapMaterializedValue(Consumer.DrainingControl.apply) // (12)
-  .run()
+
 }

@@ -16,7 +16,16 @@ import com.google.gson.JsonParser
 import au.com.bytecode.opencsv.CSVWriter
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.functions._
-
+import java.time.LocalDate
+import java.time.Month
+import java.time.LocalDateTime
+import com.mongodb.spark._
+import org.apache.spark.sql.SparkSession
+import org.bson.Document
+import com.mongodb.client.MongoDatabase
+import com.mongodb.client.MongoClient
+import com.mongodb.MongoClient
+import org.apache.spark.ml.regression.LinearRegressionModel
 
 
 
@@ -29,6 +38,9 @@ object PredictionJob {
   val sdf2 = new SimpleDateFormat("yyyy-MM-dd")
   val sdf3 = new SimpleDateFormat("HH")
   
+  val dateFrom = sdf1.parse("2018-11-1 00:00:00")
+  val dateTo = sdf1.parse("2018-12-31 23:59:59")
+  
   
   
   def main(args: Array[String]): Unit = {
@@ -36,6 +48,8 @@ object PredictionJob {
     val conf = new SparkConf().setAppName("TAPAS - a Timely Analytics & Predictions Actor System")
     .setMaster("local")
     .set("spark.driver.bindAddress", "127.0.0.1")
+    .set("spark.mongodb.input.uri", "mongodb://127.0.0.1/bitcoin.tx")
+      .set("spark.mongodb.output.uri", "mongodb://127.0.0.1/bitcoin.tx")    
     val spark = SparkSession.builder
       .config(conf)
       .getOrCreate()
@@ -53,7 +67,7 @@ object PredictionJob {
         //input: _id,fee,h,segwit,size,t,tfs,vol,vsize,weight,wfee,hash
         //output: _id,fee,h,segwit,size,t,tfs,vol,hash,confTime,hourOfDay
         val t = sdf1.parse(values(5)).getTime
-        val tfs = sdf1.parse(values(6)).getTime    
+        val tfs = sdf1.parse(values(6)).getTime            
         (
             sdf2.format(sdf1.parse(values(6))), 
             (values(0),values(1),values(2),values(3),values(4),t, tfs, values(7),values(11), t-tfs, sdf3.format(sdf1.parse(values(6)))))
@@ -62,6 +76,14 @@ object PredictionJob {
     
     rddTxs.first()
     
+    
+    //TODO ROB drop collection
+//    val documents = rddTxs.map(t=>{
+//      Document.parse("{t: "+t._2._6.longValue()+",tfs: "+t._2._7.longValue()+"}")
+//    })
+//    MongoSpark.save(documents)
+    
+
     
     //caricamento dati pricing Bitcoin e aggregazione per data con calcolo della media prezzo giornaliera 
     //restituisce RDD: timestamp, price
@@ -75,13 +97,19 @@ object PredictionJob {
         }).filter(!_._2.isNaN()).groupByKey().map(p=>(p._1, p._2.sum/p._2.size))
     println("total number of days in dailyPrice RDD: "+rddDailyPrice.count)    
     
+//    val rdd = MongoSpark.load(sc)
+    //join per data degli RDDs per aggiungere quotazioni Bitcoin giornaliere
+    //resituisce RDD: fee,segwit,size,t,tfs,vol,hash,confTime,hourOfDay,price
     
-    //join per data degli RDDs statistiche transazioni giornaliere e quotazioni Bitcoin giornaliere
-    //resituisce RDD: fee,segwit,size,t,tfs,vol,hash,confTime,hourOfDay,price 
     val rddJoined = rddTxs.join(rddDailyPrice)
-        .map(t=>Row(t._2._1._2.toDouble,t._2._1._4.toBoolean,t._2._1._5.toInt,t._2._1._6.toLong,t._2._1._7.toLong,t._2._1._8.toDouble,t._2._1._9.toString(),t._2._1._10.toLong,t._2._1._11.toLong,t._2._2.toDouble))
+        .map(t=>{
+//val filteredRdd = rdd.filter(doc => doc.getLong("t") > 32).count()
+//println(filteredRdd)
+            Row(t._2._1._2.toDouble,t._2._1._4.toBoolean,t._2._1._5.toInt,t._2._1._6.toLong,t._2._1._7.toLong,t._2._1._8.toDouble,t._2._1._9.toString(),t._2._1._10.toLong,t._2._1._11.toLong,t._2._2.toDouble)
+          })
     
     rddJoined.first()
+    
     
     
     //definzione schema dataframe finale    
@@ -100,7 +128,7 @@ object PredictionJob {
     //creazione e popolamento dataframe con esclusione righe contenenti campi NaN  
     val df = spark.createDataFrame(rddJoined, schema).na.drop()
     df.show()
-
+    
       //algoritmo di machine learning supervisionato per predizione tempo conferma Bitcoin mediante regressione lineare
     //definizione vettore di features
 //    val assembler = new VectorAssembler().setInputCols(Array("fee","segwit","size","vol","hourOfDay","price")).setOutputCol("features")
@@ -158,8 +186,10 @@ object PredictionJob {
 //    predictions.sort("date").collect().foreach(r=>lstPreds.append(Array(r.get(0).toString(),decF.format(r.get(1)),decF.format(r.get(7)))))    
 //    writeCSV("web/csv/predictions.csv", lstPreds.toList)
     
-    
-    
+    //salvataggio modello su file system
+    val MODEL_PATH = "/Users/rob/UniNettuno/dataset/mlmodel/confTime-ml-model"
+    lrModel.write.overwrite().save(MODEL_PATH)
+    LinearRegressionModel.read.load(MODEL_PATH)
     
     //terminazione contesto
     spark.stop()    
