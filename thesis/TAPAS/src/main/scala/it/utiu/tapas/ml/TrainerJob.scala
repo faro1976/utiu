@@ -23,14 +23,26 @@ import com.mongodb.spark._
 import org.apache.spark.sql.SparkSession
 import org.bson.Document
 import com.mongodb.client.MongoDatabase
-import com.mongodb.client.MongoClient
 import com.mongodb.MongoClient
 import org.apache.spark.ml.regression.LinearRegressionModel
 import it.utiu.tapas.util.BTCSchema
+import com.mongodb.spark.config.ReadConfig
+
+import org.mongodb.scala.model.Aggregates._
+import org.mongodb.scala.model.Filters._
+import org.mongodb.scala.model.Projections._
+import org.mongodb.scala.model.Sorts._
+import org.mongodb.scala.model.Updates._
+import org.mongodb.scala.model._
+import java.util.List
+import collection.JavaConverters._
+import scala.collection.mutable.ArrayBuffer
+import org.bson.conversions.Bson
 
 
 
-object PredictionJob {
+
+object TrainerJob {
   //costanti applicative
   val PATH = "hdfs://localhost:9000/bitcoin/"  //HDFS path
 //  val sdfm = new SimpleDateFormat("yyMMddhhmm")
@@ -41,6 +53,9 @@ object PredictionJob {
   
   val dateFrom = sdf1.parse("2018-11-1 00:00:00")
   val dateTo = sdf1.parse("2018-12-31 23:59:59")
+  
+val mongoClient = new MongoClient();
+val db = mongoClient.getDatabase("bitcoin");  
   
   
   
@@ -55,14 +70,14 @@ object PredictionJob {
       .config(conf)
       .getOrCreate()
     val sc = spark.sparkContext
-    sc.setLogLevel("INFO")
+    sc.setLogLevel("ERROR")
 
     
     //popolamento RDD con dati delle transazioni Bitcoin in formato CSV     
 //    val rddTxsRaw = sc.textFile(PATH+"large/*.csv")
     val rddTxsRaw = sc.textFile(PATH+"transactions/rob.csv")
     val rddTxsHead = rddTxsRaw.first()
-    val rddTxs = rddTxsRaw.filter(row => row != rddTxsHead).filter(line=>line.split(",")(6).length()>0)
+    val rddTinyTxs = rddTxsRaw.filter(row => row != rddTxsHead).filter(line=>line.split(",")(6).length()>0)
       .map(line=>{
         val values = line.split(",")
         //input: _id,fee,h,segwit,size,t,tfs,vol,vsize,weight,wfee,hash
@@ -72,19 +87,38 @@ object PredictionJob {
         (
             sdf2.format(sdf1.parse(values(6))), 
             (values(0),values(1),values(2),values(3),values(4),t, tfs, values(7),values(11), t-tfs, sdf3.format(sdf1.parse(values(6)))))
-    }).filter(t=>t._2._7>0)
-    println("total number of transactions: "+rddTxs.count)
+    })
+    println("total number of transactions: "+rddTinyTxs.count)
     
-    rddTxs.first()
+    rddTinyTxs.first()
     
     
-    //TODO ROB drop collection
-//    val documents = rddTxs.map(t=>{
+////    TODO ROB drop collection
+//    MongoConnector(sc).withDatabaseDo(ReadConfig(sc), db => db.drop())
+//    val documents = rddTinyTxs.map(t=>{
 //      Document.parse("{t: "+t._2._6.longValue()+",tfs: "+t._2._7.longValue()+"}")
 //    })
 //    MongoSpark.save(documents)
+//    if (true) throw new RuntimeException()
     
-
+//    val rdd = MongoSpark.load(sc)
+    val rddTxs = rddTinyTxs.map(t=>{
+      //TODO ROB calcolcare annche mempool sizE??
+      //mempool txs count      
+      val tfs = t._2._7
+      
+      val aggrIterator = db.getCollection("tx").aggregate(ArrayBuffer[Bson](
+                                and(org.mongodb.scala.model.Aggregates.filter(lte("tfs", tfs)),org.mongodb.scala.model.Aggregates.filter(gte("t", tfs))),
+                                org.mongodb.scala.model.Aggregates.count("counter")
+                                ).asJava).iterator()
+    val mempoolCount = Integer.valueOf(aggrIterator.next().get("counter").toString())
+//    println(mempoolCount)    
+    println(mempoolCount + "@" + new Date().getTime)    
+                                                                   
+      
+      
+      (t._1, (t._2._1,t._2._2,t._2._3,t._2._4,t._2._5,t._2._6,t._2._7,t._2._8,t._2._9,t._2._10,t._2._11,mempoolCount))
+    })
     
     //caricamento dati pricing Bitcoin e aggregazione per data con calcolo della media prezzo giornaliera 
     //restituisce RDD: timestamp, price
@@ -100,18 +134,19 @@ object PredictionJob {
     
 //    val rdd = MongoSpark.load(sc)
     //join per data degli RDDs per aggiungere quotazioni Bitcoin giornaliere
-    //resituisce RDD: fee,segwit,size,t,tfs,vol,hash,confTime,hourOfDay,price
+    //resituisce RDD: fee,segwit,size,t,tfs,vol,hash,confTime,hourOfDay,price,mempoolCount
     
     val rddJoined = rddTxs.join(rddDailyPrice)
         .map(t=>{
 //val filteredRdd = rdd.filter(doc => doc.getLong("t") > 32).count()
 //println(filteredRdd)
-            Row(t._2._1._2.toDouble,t._2._1._4.toBoolean,t._2._1._5.toInt,t._2._1._6.toLong,t._2._1._7.toLong,t._2._1._8.toDouble,t._2._1._9.toString(),t._2._1._10.toLong,t._2._1._11.toLong,t._2._2.toDouble)
+          //TODO ROB forse qui posso levare alcuni cast?
+            Row(t._2._1._2.toDouble,t._2._1._4.toBoolean,t._2._1._5.toInt,t._2._1._6.toLong,t._2._1._7.toLong,t._2._1._8.toDouble,t._2._1._9.toString(),t._2._1._10.toLong,t._2._1._11.toLong,t._2._2.toDouble,t._2._1._12.toInt)
           })
     
     rddJoined.first()
     
-    
+
     
       
     //creazione e popolamento dataframe con esclusione righe contenenti campi NaN  
@@ -121,7 +156,7 @@ object PredictionJob {
       //algoritmo di machine learning supervisionato per predizione tempo conferma Bitcoin mediante regressione lineare
     //definizione vettore di features
 //    val assembler = new VectorAssembler().setInputCols(Array("fee","segwit","size","vol","hourOfDay","price")).setOutputCol("features")
-    val assembler = new VectorAssembler().setInputCols(Array("fee","size")).setOutputCol("features")
+    val assembler = new VectorAssembler().setInputCols(Array("fee","size","mempool")).setOutputCol("features")
     val ds = assembler.transform(df).cache()
     
     
@@ -161,7 +196,7 @@ object PredictionJob {
       .withColumn("~predictedCT", predictions.col("predictedConfTime").cast("Decimal(10,0)"))
       .withColumn("sConfTime", col("confTime")/1000)
       .withColumn("sDiff", abs(col("confTime")-col("predictedConfTime")) / 1000  )
-      .withColumn("%Diff", col("sDiff") / col("sConfTime") * 100  )
+      .withColumn("%Diff", col("sDiff") / col("sConfTime") * 100  )   
 
       
     extPredictions.show

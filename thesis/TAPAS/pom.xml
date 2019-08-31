@@ -103,6 +103,13 @@
     <artifactId>mongo-spark-connector_2.11</artifactId>
     <version>2.4.1</version>
 </dependency>
+
+<!-- https://mvnrepository.com/artifact/org.mongodb.scala/mongo-scala-driver -->
+<dependency>
+    <groupId>org.mongodb.scala</groupId>
+    <artifactId>mongo-scala-driver_2.11</artifactId>
+    <version>2.7.0</version>
+</dependency>
     
 
   </dependencies>

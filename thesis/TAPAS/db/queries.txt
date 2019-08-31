@@ -1,0 +1,23 @@
+db.tx.aggregate(
+  [
+    { $match: 
+      { 
+        $and: [ { tfs: { $lte: 1541027141000} }, { t: { $gte: 1541027141000 } } ] 
+      } 
+    },
+    { $group: { _id: null, count: { $sum: 1 } } }  ]
+)
+
+
+db.tx.aggregate(
+  [
+    { $match: 
+      { 
+        $and: [ { tfs: { $lte: 99999999999999} }, { t: { $gte: 0 } } ] 
+      } 
+    },
+    { $group: { _id: null, count: { $sum: 1 } } }  ]
+)
+
+
+db.tx.createIndex( { "t": 1, "tfs": 1 } );

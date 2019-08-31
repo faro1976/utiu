@@ -22,6 +22,7 @@ object BTCSchema {
       .add(StructField("confTime", LongType, false, Metadata.empty))
       .add(StructField("hourOfDay", LongType, false, Metadata.empty))
       .add(StructField("price", DoubleType, false, Metadata.empty))
+      .add(StructField("mempool", IntegerType, false, Metadata.empty))
 
     val schema2 = new StructType()
       .add(StructField("fee", DoubleType, false, Metadata.empty))
