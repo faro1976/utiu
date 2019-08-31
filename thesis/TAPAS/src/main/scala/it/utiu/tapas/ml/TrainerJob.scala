@@ -26,6 +26,7 @@ import com.mongodb.client.MongoDatabase
 import com.mongodb.client.MongoClient
 import com.mongodb.MongoClient
 import org.apache.spark.ml.regression.LinearRegressionModel
+import it.utiu.tapas.util.BTCSchema
 
 
 
@@ -112,32 +113,20 @@ object PredictionJob {
     
     
     
-    //definzione schema dataframe finale    
-    val schema = new StructType()
-      .add(StructField("fee", DoubleType, false, Metadata.empty))
-      .add(StructField("segwit", BooleanType, false, Metadata.empty))
-      .add(StructField("size", IntegerType, false, Metadata.empty))
-      .add(StructField("t", LongType, false, Metadata.empty))
-      .add(StructField("tfs", LongType, false, Metadata.empty))
-      .add(StructField("vol", DoubleType, false, Metadata.empty))
-      .add(StructField("hash", StringType, false, Metadata.empty))
-      .add(StructField("confTime", LongType, false, Metadata.empty))
-      .add(StructField("hourOfDay", LongType, false, Metadata.empty))
-      .add(StructField("price", DoubleType, false, Metadata.empty))
       
     //creazione e popolamento dataframe con esclusione righe contenenti campi NaN  
-    val df = spark.createDataFrame(rddJoined, schema).na.drop()
+    val df = spark.createDataFrame(rddJoined, BTCSchema.schema).na.drop()
     df.show()
     
       //algoritmo di machine learning supervisionato per predizione tempo conferma Bitcoin mediante regressione lineare
     //definizione vettore di features
 //    val assembler = new VectorAssembler().setInputCols(Array("fee","segwit","size","vol","hourOfDay","price")).setOutputCol("features")
     val assembler = new VectorAssembler().setInputCols(Array("fee","size")).setOutputCol("features")
-    val dfML = assembler.transform(df).cache()
+    val ds = assembler.transform(df).cache()
     
     
     //definizione training e test set
-    val Array(training, test) = dfML.randomSplit(Array(0.7, 0.3), 123)
+    val Array(training, test) = ds.randomSplit(Array(0.7, 0.3), 123)
     println("training count:"+training.count())
     println("test count:"+test.count())
 
@@ -187,9 +176,9 @@ object PredictionJob {
 //    writeCSV("web/csv/predictions.csv", lstPreds.toList)
     
     //salvataggio modello su file system
-    val MODEL_PATH = "/Users/rob/UniNettuno/dataset/mlmodel/confTime-ml-model"
-    lrModel.write.overwrite().save(MODEL_PATH)
-    LinearRegressionModel.read.load(MODEL_PATH)
+    val MODEL_PATH = "/Users/rob/UniNettuno/dataset/ml-model/confTime-ml-model"
+    lrModel.write.overwrite().save(MODEL_PATH)    
+    println("coefficients from loaded model " + LinearRegressionModel.read.load(MODEL_PATH).coefficients)
     
     //terminazione contesto
     spark.stop()    
