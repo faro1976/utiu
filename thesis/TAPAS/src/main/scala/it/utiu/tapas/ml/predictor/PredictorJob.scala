@@ -1,40 +1,22 @@
-package it.utiu.tapas.ml
+package it.utiu.tapas.ml.predictor
 
-import java.io.BufferedWriter
-import java.io.FileWriter
-import java.text.DecimalFormat
-import java.text.SimpleDateFormat
-import java.util.Date
 import scala.collection.JavaConversions.seqAsJavaList
-import scala.collection.mutable.ListBuffer
 import org.apache.spark.SparkConf
 import org.apache.spark.ml.feature.VectorAssembler
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.SparkSession
-import com.google.gson.JsonParser
-import au.com.bytecode.opencsv.CSVWriter
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.functions._
-import java.time.LocalDate
-import java.time.Month
-import java.time.LocalDateTime
 import com.mongodb.spark._
 import org.apache.spark.sql.SparkSession
-import org.bson.Document
-import com.mongodb.client.MongoDatabase
-import com.mongodb.client.MongoClient
-import com.mongodb.MongoClient
 import it.utiu.tapas.util.Consts
-import akka.actor.Props
-import akka.actor.AbstractActor.Receive
 import org.apache.spark.ml.regression.LinearRegressionModel
-//import it.utiu.tapas.ml.PredictorActor.AskPrediction
 import it.utiu.tapas.util.Consts
 import it.utiu.tapas.util.Consts
-import it.utiu.tapas.util.BTCSchema
 import scala.collection.JavaConverters._
-import scala.collection.immutable.List
 import java.util.ArrayList
+import scala.collection.Seq
+import scala.reflect.api.materializeTypeTag
 
 
 

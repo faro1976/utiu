@@ -1,40 +1,51 @@
-package it.utiu.tapas.stream
+package it.utiu.tapas.stream.consumer
 
 import akka.kafka.ConsumerSettings
 import org.apache.kafka.common.serialization.ByteArrayDeserializer
 import org.apache.kafka.clients.consumer.ConsumerConfig
-import akka.kafka.ProducerSettings
 import akka.kafka.Subscriptions
-import akka.kafka.CommitterSettings
-import akka.NotUsed
 import akka.kafka.scaladsl.Consumer
-import akka.Done
 import scala.concurrent.duration._
-import org.apache.kafka.common.serialization.IntegerDeserializer
 import org.apache.kafka.common.serialization.StringDeserializer
 import akka.actor.ActorSystem
-import scala.concurrent.Future
 import akka.stream.scaladsl.Sink
-import org.apache.kafka.clients.producer.ProducerRecord
-import akka.kafka.ProducerMessage
-import akka.stream.scaladsl.Keep
-import akka.kafka.scaladsl.Producer
-import akka.kafka.scaladsl.Consumer.DrainingControl
 import akka.stream.ActorMaterializer
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.ExecutionContext
+import akka.actor.Props
+import akka.actor.AbstractActor.Receive
+import akka.actor.Actor
+import akka.actor.ActorLogging
+import it.utiu.anavis.BTCPriceTrainerActor
 
-object BTCConsumer {
-  val topic1 = "test"
+
+object BTCConsumerActor {
+
+  
+  def props(): Props = Props(new BTCConsumerActor())
+
+      
+  case class StartConsuming()  
+
+    val topic1 = "test"
   val kafkaBootstrapServers = "localhost"
   val groupId = "group1"
 
-  def main(args: Array[String]): Unit = {
-    implicit val system: ActorSystem = ActorSystem("rob")
-    implicit val materializer: ActorMaterializer = ActorMaterializer()
-    implicit val executionContext: ExecutionContext = system.dispatcher
+}
 
-    val consumerSettings = ConsumerSettings(system, new ByteArrayDeserializer, new StringDeserializer)
+  class BTCConsumerActor extends Actor with ActorLogging {
+    override def receive: Receive = {
+
+        case BTCConsumerActor.StartConsuming() => doConsuming()
+        case BTCPriceTrainerActor.TrainingFinished => reloadModel()
+    }
+    
+    private def doConsuming() {
+    implicit val materializer: ActorMaterializer = ActorMaterializer()
+    implicit val executionContext: ExecutionContext = context.system.dispatcher
+    import BTCConsumerActor._
+
+    val consumerSettings = ConsumerSettings(context.system, new ByteArrayDeserializer, new StringDeserializer)
       .withBootstrapServers("localhost:9092")
       .withGroupId(groupId)
       .withProperty(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest")
@@ -48,7 +59,11 @@ object BTCConsumer {
         }
         .runWith(Sink.ignore)
 
-    done.onComplete(_ => system.terminate())
-  }
+    done.onComplete(_ => return)
+      
+    }
+      
+private def reloadModel() {
+}
 
 }
