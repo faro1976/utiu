@@ -5,9 +5,11 @@ import akka.actor.ActorSystem
 import akka.event.Logging
 import java.util.Date
 import akka.actor.ActorRef
-import it.utiu.anavis.BTCPriceTrainerActor
 import scala.concurrent.duration.Duration
 import it.utiu.tapas.stream.consumer.BTCConsumerActor
+import it.utiu.anavis.DummyTrainerActor
+import it.utiu.tapas.stream.consumer.DummyConsumerActor
+import it.utiu.tapas.ml.predictor.DummyPredictorActor
 
 /**
  * @author ${user.name}
@@ -30,13 +32,18 @@ object App {
 
 class App(system: ActorSystem) {
   var trainerRef: ActorRef = null
+  var predictorRef: ActorRef = null
   var consumerRef: ActorRef = null
+  var producerRef: ActorRef = null
 
   def run(): Unit = {
-    trainerRef = system.actorOf(BTCPriceTrainerActor.props(), "BTCTrainer")
-    consumerRef = system.actorOf(BTCConsumerActor.props(), "BTCConsumer")
-    trainerRef ! BTCPriceTrainerActor.StartTraining
-    consumerRef ! BTCConsumerActor.StartConsuming
+    trainerRef = system.actorOf(DummyTrainerActor.props(), "Trainer")
+    predictorRef = system.actorOf(DummyPredictorActor.props(), "Predictor")
+    consumerRef = system.actorOf(DummyConsumerActor.props(predictorRef), "Consumer")
+    
+    trainerRef ! DummyTrainerActor.StartTraining()
+//    consumerRef ! BTCConsumerActor.StartConsuming
+//    producerRef ! BTCConsumerActor.StartProducer
     Await.ready(system.whenTerminated, Duration.Inf)
   }
 
