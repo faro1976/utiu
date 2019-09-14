@@ -26,6 +26,7 @@ object WineTrainerActor {
   //costanti applicative
   val PATH = "hdfs://localhost:9000/wine/wine.data" //HDFS path
   val MODEL_PATH = "/Users/rob/UniNettuno/dataset/ml-model/wine-ml-model"
+  val SPARK_URL = "spark://localhost:7077"
 
 }
 
@@ -47,8 +48,12 @@ class WineTrainerActor extends Actor with ActorLogging {
     import WineTrainerActor._
 
     //spark init
-    val conf = new SparkConf().setAppName("wine")
-      .setMaster("local")
+    val conf = new SparkConf()
+      .setAppName("wine")
+      .setMaster(SPARK_URL)
+      .set("spark.executor.instances", "1")
+      .set("spark.executor.cores", "1")
+      .set("spark.executor.memory", "1g")
     val spark = SparkSession.builder
       .config(conf)
       .getOrCreate()
@@ -93,11 +98,12 @@ class WineTrainerActor extends Actor with ActorLogging {
     println("features from loaded model " + LogisticRegressionModel.read.load(MODEL_PATH).numFeatures)
 
     //terminazione contesto
-    spark.stop()
+    //TODO ROB lasciare aperto così lo reucpero al prossimo giro??
+    //spark.stop()
 
     //invio notifica a predictor
     context.actorSelection("/user/WineConsumer*") ! TrainingFinished()
-//    self ! TrainingFinished()
+    self ! TrainingFinished()
   }
 
 }

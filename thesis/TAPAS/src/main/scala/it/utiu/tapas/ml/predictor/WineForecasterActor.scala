@@ -18,7 +18,7 @@ import scala.collection.mutable.ArrayBuffer
 import scala.collection.mutable.ListBuffer
 
 object WineForecasterActor {
-
+val SPARK_URL = "spark://localhost:7077"
   def props(): Props = Props(new WineForecasterActor())
 
   case class AskPrediction(msgs: String)
@@ -39,6 +39,10 @@ class WineForecasterActor() extends Actor with ActorLogging {
     
     val conf = new SparkConf().setAppName("TAPAS - a Timely Analytics & Predictions Actor System")
       .setMaster("local")
+      .set("spark.executor.instances", "1")
+      .set("spark.executor.cores", "1")
+      .set("spark.executor.memory", "1g")
+      
     val spark = SparkSession.builder
       .config(conf)
       .getOrCreate()
@@ -89,7 +93,8 @@ val someDF = Seq(
     val ret = predictions.select("predictedClass").collect().map(_(0)).toList
 
     //terminazione contesto
-    spark.stop()
+    //TODO ROB lasciare aperto così lo reucpero al prossimo giro??    
+//    spark.stop()
 
     return ret.asInstanceOf[List[String]]
   }

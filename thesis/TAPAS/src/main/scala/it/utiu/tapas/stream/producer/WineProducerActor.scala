@@ -50,7 +50,7 @@ class WineProducerActor extends Actor with ActorLogging {
 //      .runWith(Producer.plainSink(producerSettings))
       
 
-
+while(true){
 
     val file = scala.io.Source.fromFile(WineProducerActor.IN_PATH)
 val source: Source[String, NotUsed] = Source(file.getLines().toIterable.to[collection.immutable.Iterable])
@@ -63,7 +63,7 @@ val source: Source[String, NotUsed] = Source(file.getLines().toIterable.to[colle
       }
       .runWith(Producer.plainSink(producerSettings))
 
-      
+Thread.sleep(5000);}      
  
   }
 
