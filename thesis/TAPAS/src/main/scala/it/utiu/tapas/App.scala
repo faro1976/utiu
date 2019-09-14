@@ -31,7 +31,6 @@ object App {
 
 }
 
-
 class App(system: ActorSystem) {
   var trainerRef: ActorRef = null
   var forecasterRef: ActorRef = null
@@ -44,9 +43,11 @@ class App(system: ActorSystem) {
     consumerRef = system.actorOf(WineConsumerActor.props(forecasterRef), "consumer")
     producerRef = system.actorOf(WineProducerActor.props(), "producer")
     
-//    trainerRef ! WineTrainerActor.StartTraining()
-//    consumerRef ! WineConsumerActor.StartConsuming()
-    producerRef ! WineProducerActor.StartProducing()
+    trainerRef ! WineTrainerActor.StartTraining()
+    Thread.sleep(60000)
+    producerRef ! WineProducerActor.StartProducing()    
+    Thread.sleep(1000)
+    consumerRef ! WineConsumerActor.StartConsuming()    
     Await.ready(system.whenTerminated, Duration.Inf)
   }
 

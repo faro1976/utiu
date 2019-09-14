@@ -25,6 +25,7 @@ object WineTrainerActor {
 
   //costanti applicative
   val PATH = "hdfs://localhost:9000/wine/wine.data" //HDFS path
+  val MODEL_PATH = "/Users/rob/UniNettuno/dataset/ml-model/wine-ml-model"
 
 }
 
@@ -87,8 +88,7 @@ class WineTrainerActor extends Actor with ActorLogging {
     val accuracy = evaluator.evaluate(predictionsLR)
     println("accuracy: " + accuracy)
 
-    //salvataggio modello su file system
-    val MODEL_PATH = "/Users/rob/UniNettuno/dataset/ml-model/wine-ml-model"
+    //salvataggio modello su file system    
     modelLR.write.overwrite().save(MODEL_PATH)
     println("features from loaded model " + LogisticRegressionModel.read.load(MODEL_PATH).numFeatures)
 
