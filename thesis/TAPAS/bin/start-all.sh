@@ -5,7 +5,7 @@ FWK_PATH="/Users/rob/src/extlib"
 
 #start zookeeper
 cd $FWK_PATH/kafka_2.12-2.3.0
-nohup nohup bin/zookeeper-server-start.sh config/zookeeper.properties &
+nohup bin/zookeeper-server-start.sh config/zookeeper.properties &
 
 sleep 5
 #start kafka server

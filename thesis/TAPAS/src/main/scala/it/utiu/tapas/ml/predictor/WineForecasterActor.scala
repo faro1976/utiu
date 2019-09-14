@@ -19,21 +19,21 @@ import akka.actor.ActorLogging
 import akka.actor.Actor
 
 
-object WinePredictorActor {
+object WineForecasterActor {
 
-    def props(): Props = Props(new WinePredictorActor())
+    def props(): Props = Props(new WineForecasterActor())
 
   case class AskPrediction(msgs: List[List[Double]])
   case class TellPrediction(predict: List[String])
 }
 
 
-class WinePredictorActor()   extends Actor with ActorLogging {
+class WineForecasterActor()   extends Actor with ActorLogging {
 
     override def receive: Receive = {
 
 
-        case WinePredictorActor.AskPrediction(msgs: List[List[Double]]) =>
+        case WineForecasterActor.AskPrediction(msgs: List[List[Double]]) =>
           println("entro")
           doPredict(msgs)
     }

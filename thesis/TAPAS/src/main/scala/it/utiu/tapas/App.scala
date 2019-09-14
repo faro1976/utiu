@@ -9,8 +9,9 @@ import akka.actor.ActorRef
 import akka.actor.ActorSystem
 import akka.event.Logging
 import it.utiu.anavis.WineTrainerActor
-import it.utiu.tapas.ml.predictor.WinePredictorActor
 import it.utiu.tapas.stream.consumer.WineConsumerActor
+import it.utiu.tapas.ml.predictor.WineForecasterActor
+import it.utiu.tapas.stream.consumer.WineProducerActor
 
 /**
  * @author ${user.name}
@@ -33,18 +34,19 @@ object App {
 
 class App(system: ActorSystem) {
   var trainerRef: ActorRef = null
-  var predictorRef: ActorRef = null
+  var forecasterRef: ActorRef = null
   var consumerRef: ActorRef = null
   var producerRef: ActorRef = null
 
   def run(): Unit = {
-    trainerRef = system.actorOf(WineTrainerActor.props(), "Trainer")
-    predictorRef = system.actorOf(WinePredictorActor.props(), "Predictor")
-    consumerRef = system.actorOf(WineConsumerActor.props(predictorRef), "Consumer")
+    trainerRef = system.actorOf(WineTrainerActor.props(), "trainer")
+    forecasterRef = system.actorOf(WineForecasterActor.props(), "forecaster")
+    consumerRef = system.actorOf(WineConsumerActor.props(forecasterRef), "consumer")
+    producerRef = system.actorOf(WineProducerActor.props(), "producer")
     
-    trainerRef ! WineTrainerActor.StartTraining()
-    consumerRef ! WineConsumerActor.StartConsuming
-//    producerRef ! BTCConsumerActor.StartProducer
+//    trainerRef ! WineTrainerActor.StartTraining()
+//    consumerRef ! WineConsumerActor.StartConsuming()
+    producerRef ! WineProducerActor.StartProducing()
     Await.ready(system.whenTerminated, Duration.Inf)
   }
 

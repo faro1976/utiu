@@ -18,7 +18,7 @@ import akka.actor.Actor
 import akka.actor.ActorLogging
 import it.utiu.anavis.BTCPriceTrainerActor
 import akka.actor.ActorRef
-import it.utiu.tapas.ml.predictor.WinePredictorActor
+import it.utiu.tapas.ml.predictor.WineForecasterActor
 
 
 object WineConsumerActor {
@@ -49,7 +49,7 @@ val d3 = List(12.15,2.67,2.43,22,112,1.48,1.36,.24,1.26,10.8,.48,1.47,344)
 
 val msgs = List(d1,d2,d3)
       
-      predictor ! WinePredictorActor.AskPrediction(msgs)
+      predictor ! WineForecasterActor.AskPrediction(msgs)
       
     implicit val materializer: ActorMaterializer = ActorMaterializer()
     implicit val executionContext: ExecutionContext = context.system.dispatcher
