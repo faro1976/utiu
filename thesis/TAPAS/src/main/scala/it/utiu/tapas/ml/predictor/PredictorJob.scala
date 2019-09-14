@@ -47,8 +47,8 @@ object PredictorActor {
       .getOrCreate()
     val sc = spark.sparkContext
     sc.setLogLevel("INFO")
-
-    val lrModel: LinearRegressionModel = LinearRegressionModel.read.load(Consts.MODEL_PATH)
+val MODEL_PATH = "/Users/rob/UniNettuno/dataset/ml-model/confTime-ml-model"
+    val lrModel: LinearRegressionModel = LinearRegressionModel.read.load(MODEL_PATH)
 
 val data = List(34,343434)
 val data2:java.util.List[Int] = data

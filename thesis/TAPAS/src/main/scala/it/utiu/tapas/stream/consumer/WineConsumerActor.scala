@@ -71,7 +71,7 @@ class WineConsumerActor(forecaster: ActorRef) extends Actor with ActorLogging {
     val consumerSettings = ConsumerSettings(context.system, new ByteArrayDeserializer, new StringDeserializer)
       .withBootstrapServers("localhost:9092")
       .withGroupId(groupId)
-      .withProperty(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest")
+//      .withProperty(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest")  //read from beginnig
 
     val done =
       Consumer.plainSource(consumerSettings, Subscriptions.topics(topic1))
@@ -97,7 +97,7 @@ class WineConsumerActor(forecaster: ActorRef) extends Actor with ActorLogging {
           } else {
             //messaggio preventivo
             println("request prediction for: "+strMsg)
-            forecaster ! WineForecasterActor.AskPrediction(List(strMsg))
+            forecaster ! WineForecasterActor.AskPrediction(strMsg)
           }
           Future.successful(Done)
         }

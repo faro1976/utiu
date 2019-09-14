@@ -97,7 +97,7 @@ class WineTrainerActor extends Actor with ActorLogging {
 
     //invio notifica a predictor
     context.actorSelection("/user/WineConsumer*") ! TrainingFinished()
-    self ! TrainingFinished()
+//    self ! TrainingFinished()
   }
 
 }

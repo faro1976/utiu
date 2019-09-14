@@ -59,7 +59,6 @@ val source: Source[String, NotUsed] = Source(file.getLines().toIterable.to[colle
 
       .map(_.toString)
       .map { elem =>
-        println(2)
         new ProducerRecord[Array[Byte], String](WineProducerActor.topic1, elem)
       }
       .runWith(Producer.plainSink(producerSettings))
