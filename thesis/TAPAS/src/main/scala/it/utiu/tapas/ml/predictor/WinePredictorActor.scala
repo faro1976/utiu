@@ -19,26 +19,26 @@ import akka.actor.ActorLogging
 import akka.actor.Actor
 
 
-object DummyPredictorActor {
+object WinePredictorActor {
 
-    def props(): Props = Props(new DummyPredictorActor())
+    def props(): Props = Props(new WinePredictorActor())
 
-  case class AskPrediction(msgs: List[List[Long]])
+  case class AskPrediction(msgs: List[List[Double]])
   case class TellPrediction(predict: List[String])
 }
 
 
-class DummyPredictorActor()   extends Actor with ActorLogging {
+class WinePredictorActor()   extends Actor with ActorLogging {
 
     override def receive: Receive = {
 
 
-        case DummyPredictorActor.AskPrediction(msgs: List[List[Long]]) =>
+        case WinePredictorActor.AskPrediction(msgs: List[List[Double]]) =>
           println("entro")
           doPredict(msgs)
     }
     
-    def doPredict(msgs: List[List[Long]]) {
+    def doPredict(msgs: List[List[Double]]) {
 
   
   val conf = new SparkConf().setAppName("TAPAS - a Timely Analytics & Predictions Actor System")
@@ -48,20 +48,20 @@ class DummyPredictorActor()   extends Actor with ActorLogging {
       .getOrCreate()
     val sc = spark.sparkContext
     sc.setLogLevel("INFO")
-    val MODEL_PATH = "/Users/rob/UniNettuno/dataset/ml-model/dummy-ml-model"
-    println("coefficients from loaded model " + LogisticRegressionModel.read.load(MODEL_PATH).coefficients)
+    val MODEL_PATH = "/Users/rob/UniNettuno/dataset/ml-model/wine-ml-model"
+    println("features from loaded model " + LogisticRegressionModel.read.load(MODEL_PATH).numFeatures)
     val lrModel: LogisticRegressionModel = LogisticRegressionModel.read.load(Consts.MODEL_PATH)
 
 
 val sentenceData = spark.createDataFrame(Seq(
   msgs
-)).toDF("_1","_2","_3","_4","_5","_6","_7")
+)).toDF("_1","_2","_3","_4","_5","_6","_7","_8","_9","_10","_11","_12","_13","_14")
     
-    val assembler = new VectorAssembler().setInputCols(Array("_1","_2","_3","_4","_5","_6","_7")).setOutputCol("features")
+    val assembler = new VectorAssembler().setInputCols(Array("_1","_2","_3","_4","_5","_6","_7","_8","_9","_10","_11","_12","_13","_14")).setOutputCol("features")
     val ds = assembler.transform(sentenceData)
     
     
-    //    val df = spark.createDataFrame(rddJoined, BTCSchema.schema).na.drop()
+
     val predictions = lrModel.transform(ds)
     println("prediction from loaded model...")
     predictions.show()

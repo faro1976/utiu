@@ -18,13 +18,13 @@ import akka.actor.Actor
 import akka.actor.ActorLogging
 import it.utiu.anavis.BTCPriceTrainerActor
 import akka.actor.ActorRef
-import it.utiu.tapas.ml.predictor.DummyPredictorActor
+import it.utiu.tapas.ml.predictor.WinePredictorActor
 
 
-object DummyConsumerActor {
+object WineConsumerActor {
 
   
-  def props(predictor: ActorRef): Props = Props(new DummyConsumerActor(predictor))
+  def props(predictor: ActorRef): Props = Props(new WineConsumerActor(predictor))
 
       
   case class StartConsuming()  
@@ -35,27 +35,25 @@ object DummyConsumerActor {
 
 }
 
-  class DummyConsumerActor(predictor: ActorRef) extends Actor with ActorLogging {
+  class WineConsumerActor(predictor: ActorRef) extends Actor with ActorLogging {
     override def receive: Receive = {
 
-        case DummyConsumerActor.StartConsuming() => doConsuming()
+        case WineConsumerActor.StartConsuming() => doConsuming()
     }
     
     private def doConsuming() {
       
-val d1 = List(1l,2l,3l,4l,5l,6l,7l)
-val d2 = List(1l,2l,3l,4l,5l,6l,7l)
-val d3 = List(1l,2l,3l,4l,5l,6l,7l)
-val d4 = List(1l,2l,3l,4l,5l,6l,7l)
-val d5 = List(1l,2l,3l,4l,5l,6l,7l)
+val d1 = List(13.39,1.77,2.62,16.1,90,2.85,2.94,.34,1.45,4.8,.92,3.22,1009)
+val d2 = List(12.79,2.67,2.45,22,112,1.48,1.36,.24,1.26,10.8,.48,1.47,344)
+val d3 = List(12.15,2.67,2.43,22,112,1.48,1.36,.24,1.26,10.8,.48,1.47,344)
 
-val msgs = List(d1,d2,d3,d4,d5)
+val msgs = List(d1,d2,d3)
       
-      predictor ! DummyPredictorActor.AskPrediction(msgs)
+      predictor ! WinePredictorActor.AskPrediction(msgs)
       
     implicit val materializer: ActorMaterializer = ActorMaterializer()
     implicit val executionContext: ExecutionContext = context.system.dispatcher
-    import DummyConsumerActor._
+    import WineConsumerActor._
 
     val consumerSettings = ConsumerSettings(context.system, new ByteArrayDeserializer, new StringDeserializer)
       .withBootstrapServers("localhost:9092")

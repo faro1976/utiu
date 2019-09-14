@@ -1,15 +1,16 @@
 package it.utiu.tapas
 
+import java.util.Date
+
 import scala.concurrent.Await
+import scala.concurrent.duration.Duration
+
+import akka.actor.ActorRef
 import akka.actor.ActorSystem
 import akka.event.Logging
-import java.util.Date
-import akka.actor.ActorRef
-import scala.concurrent.duration.Duration
-import it.utiu.tapas.stream.consumer.BTCConsumerActor
-import it.utiu.anavis.DummyTrainerActor
-import it.utiu.tapas.stream.consumer.DummyConsumerActor
-import it.utiu.tapas.ml.predictor.DummyPredictorActor
+import it.utiu.anavis.WineTrainerActor
+import it.utiu.tapas.ml.predictor.WinePredictorActor
+import it.utiu.tapas.stream.consumer.WineConsumerActor
 
 /**
  * @author ${user.name}
@@ -37,12 +38,12 @@ class App(system: ActorSystem) {
   var producerRef: ActorRef = null
 
   def run(): Unit = {
-    trainerRef = system.actorOf(DummyTrainerActor.props(), "Trainer")
-    predictorRef = system.actorOf(DummyPredictorActor.props(), "Predictor")
-    consumerRef = system.actorOf(DummyConsumerActor.props(predictorRef), "Consumer")
+    trainerRef = system.actorOf(WineTrainerActor.props(), "Trainer")
+    predictorRef = system.actorOf(WinePredictorActor.props(), "Predictor")
+    consumerRef = system.actorOf(WineConsumerActor.props(predictorRef), "Consumer")
     
-    trainerRef ! DummyTrainerActor.StartTraining()
-//    consumerRef ! BTCConsumerActor.StartConsuming
+    trainerRef ! WineTrainerActor.StartTraining()
+    consumerRef ! WineConsumerActor.StartConsuming
 //    producerRef ! BTCConsumerActor.StartProducer
     Await.ready(system.whenTerminated, Duration.Inf)
   }
