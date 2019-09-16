@@ -1,6 +1,7 @@
 package it.utiu.tapas.ml.predictor
 
 import scala.collection.Seq
+import scala.collection.mutable.ListBuffer
 import scala.reflect.api.materializeTypeTag
 
 import org.apache.spark.SparkConf
@@ -8,48 +9,22 @@ import org.apache.spark.ml.classification.LogisticRegressionModel
 import org.apache.spark.ml.feature.VectorAssembler
 import org.apache.spark.sql.SparkSession
 
-import akka.actor.Actor
-import akka.actor.ActorLogging
 import akka.actor.Props
+import it.utiu.tapas.base.AbstractPredictorActor
+import org.apache.spark.ml.Model
 import it.utiu.tapas.util.Consts
-import it.utiu.tapas.ml.predictor.WineForecasterActor.TellPrediction
-import it.utiu.anavis.WineTrainerActor
-import scala.collection.mutable.ArrayBuffer
-import scala.collection.mutable.ListBuffer
 
-object WineForecasterActor {
-val SPARK_URL = "spark://localhost:7077"
-  def props(): Props = Props(new WineForecasterActor())
+object WinePredictorActor {
+  def props(): Props = Props(new WinePredictorActor())
 
-  case class AskPrediction(msgs: String)
-  case class TellPrediction(prediction: List[String])
 }
 
-class WineForecasterActor() extends Actor with ActorLogging {
+class WinePredictorActor() extends AbstractPredictorActor(Consts.CS_WINE) {
 
-  override def receive: Receive = {
 
-    case WineForecasterActor.AskPrediction(msgs: String) =>
-      println("prediction starting...")
-      sender ! TellPrediction(doPredict(msgs))
-  }
-
-  def doPredict(msgs: String): List[String] = {
+  def doInternalPrediction(spark: SparkSession, lrModel: Model[LogisticRegressionModel]): String
     
     
-    val conf = new SparkConf().setAppName("TAPAS - a Timely Analytics & Predictions Actor System")
-      .setMaster("local")
-      .set("spark.executor.instances", "1")
-      .set("spark.executor.cores", "1")
-      .set("spark.executor.memory", "1g")
-      
-    val spark = SparkSession.builder
-      .config(conf)
-      .getOrCreate()
-    val sc = spark.sparkContext
-    sc.setLogLevel("ERROR")
-        
-    val lrModel = LogisticRegressionModel.read.load(WineTrainerActor.MODEL_PATH)
     println("features from loaded model " + lrModel.numFeatures)
     
     //cast to List[List[Double]]
@@ -70,7 +45,7 @@ class WineForecasterActor() extends Actor with ActorLogging {
 //    val values1 = List(List("1", "One") ,List("2", "Two") ,List("3", "Three"),List("4","4")).map(x =>(x(0), x(1)))
     val values1 = List("1","2","3","4")
 
-import spark.implicits._
+import org.apache.spark.sql.SparkSession.implicits._
 
 val someDF = Seq(
   (8, "bat"),

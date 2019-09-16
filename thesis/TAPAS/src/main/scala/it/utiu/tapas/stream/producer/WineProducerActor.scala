@@ -14,6 +14,7 @@ import akka.kafka.ProducerSettings
 import akka.kafka.scaladsl.Producer
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Source
+import it.utiu.tapas.util.Consts
 
 
 
@@ -21,50 +22,9 @@ object WineProducerActor {
 
   def props(): Props = Props(new WineProducerActor())
 
-  case class StartProducing()
-
-  val topic1 = "test"
-  val kafkaBootstrapServers = "localhost"
-  val IN_PATH = "/Users/rob/UniNettuno/dataset/wine/wine.data.input"
 }
 
-class WineProducerActor extends Actor with ActorLogging {
-  override def receive: Receive = {
+class WineProducerActor extends AbstractProducerActor(Consts.CS_WINE, Consts.TOPIC_WINE) {
 
-    case WineProducerActor.StartProducing() => doProduce()
-  }
-
-  private def doProduce() {
-    implicit val materializer: ActorMaterializer = ActorMaterializer()
-    implicit val executionContext: ExecutionContext = context.system.dispatcher
-    val producerSettings = ProducerSettings(context.system, new ByteArraySerializer, new StringSerializer)
-      .withBootstrapServers("localhost:9092")
-    
-//    val done = Source(1 to 100)
-//
-//      .map(_.toString)
-//      .map { elem =>
-//        println(2)
-//        new ProducerRecord[Array[Byte], String](WineProducerActor.topic1, elem)
-//      }
-//      .runWith(Producer.plainSink(producerSettings))
-      
-
-while(true){
-
-    val file = scala.io.Source.fromFile(WineProducerActor.IN_PATH)
-val source: Source[String, NotUsed] = Source(file.getLines().toIterable.to[collection.immutable.Iterable])
-
-    val done = source
-
-      .map(_.toString)
-      .map { elem =>
-        new ProducerRecord[Array[Byte], String](WineProducerActor.topic1, elem)
-      }
-      .runWith(Producer.plainSink(producerSettings))
-
-Thread.sleep(5000);}      
- 
-  }
 
 }

@@ -2,16 +2,15 @@ package it.utiu.anavis
 
 import scala.util.Random
 
-import org.apache.spark.SparkConf
 import org.apache.spark.ml.classification.LogisticRegression
-import org.apache.spark.ml.classification.LogisticRegressionModel
 import org.apache.spark.ml.evaluation.MulticlassClassificationEvaluator
 import org.apache.spark.ml.feature.VectorAssembler
+import org.apache.spark.ml.util.MLWritable
 import org.apache.spark.sql.SparkSession
 
-import akka.actor.Actor
-import akka.actor.ActorLogging
 import akka.actor.Props
+import it.utiu.tapas.base.AbstractBaseActor
+import it.utiu.tapas.base.AbstractTrainerActor
 
 object WineTrainerActor {
 
@@ -20,48 +19,15 @@ object WineTrainerActor {
   def props(): Props =
     Props(new WineTrainerActor())
 
-  case class StartTraining()
-  case class TrainingFinished()
-
-  //costanti applicative
-  val PATH = "hdfs://localhost:9000/wine/wine.data" //HDFS path
-  val MODEL_PATH = "/Users/rob/UniNettuno/dataset/ml-model/wine-ml-model"
-  val SPARK_URL = "spark://localhost:7077"
-
+  val FILE_PATH = AbstractBaseActor.HDFS_PATH + "wine/wine.data"
 }
 
-class WineTrainerActor extends Actor with ActorLogging {
+class WineTrainerActor extends AbstractTrainerActor("Wine") {
 
-  override def receive: Receive = {
-
-    case WineTrainerActor.StartTraining() =>
-      println("entro")
-      doTraining()
-
-    case WineTrainerActor.TrainingFinished() =>
-      println("restart")
-      doTraining()
-
-  }
-
-  def doTraining() {
-    import WineTrainerActor._
-
-    //spark init
-    val conf = new SparkConf()
-      .setAppName("wine")
-      .setMaster(SPARK_URL)
-      .set("spark.executor.instances", "1")
-      .set("spark.executor.cores", "1")
-      .set("spark.executor.memory", "1g")
-    val spark = SparkSession.builder
-      .config(conf)
-      .getOrCreate()
-    val sc = spark.sparkContext
-    sc.setLogLevel("ERROR")
+  override def doInternalTraining(spark: SparkSession): MLWritable = {
 
     //caricamento dataset come CSV inferendo lo schema dall'header
-    val df1 = spark.read.format("csv").option("header", "true").option("inferSchema", "true").load(PATH)
+    val df1 = spark.read.format("csv").option("header", "true").option("inferSchema", "true").load(WineTrainerActor.FILE_PATH)
 
     //definisco le feature e le aggiungo come colonna "features"
     val assembler = new VectorAssembler().setInputCols(Array("Alcohol", "Malic", "Ash", "Alcalinity", "Magnesium", "phenols", "Flavanoids", "Nonflavanoid", "Proanthocyanins", "Color", "Hue", "OD280", "Proline")).setOutputCol("features")
@@ -93,17 +59,7 @@ class WineTrainerActor extends Actor with ActorLogging {
     val accuracy = evaluator.evaluate(predictionsLR)
     println("accuracy: " + accuracy)
 
-    //salvataggio modello su file system    
-    modelLR.write.overwrite().save(MODEL_PATH)
-    println("features from loaded model " + LogisticRegressionModel.read.load(MODEL_PATH).numFeatures)
-
-    //terminazione contesto
-    //TODO ROB lasciare aperto così lo reucpero al prossimo giro??
-    //spark.stop()
-
-    //invio notifica a predictor
-    context.actorSelection("/user/WineConsumer*") ! TrainingFinished()
-    self ! TrainingFinished()
+    return modelLR
   }
 
 }
