@@ -78,7 +78,7 @@ abstract class AbstractConsumerActor(name: String, topic: String, predictor: Act
                 val fs = FileSystem.get(new URI(AbstractBaseActor.HDFS_URL), conf);
                 val out = fs.create(path)
                 val pw = new PrintWriter(out)
-                pw.write(header + Properties.lineSeparator)
+                if (header!=null&header.size>0) pw.write(header + Properties.lineSeparator)
                 buffer.foreach(i => pw.write(i + Properties.lineSeparator))
                 pw.close()
                 out.close()
