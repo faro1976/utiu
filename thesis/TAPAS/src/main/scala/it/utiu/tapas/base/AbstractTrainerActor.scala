@@ -46,8 +46,8 @@ abstract class AbstractTrainerActor(name: String) extends AbstractBaseActor(name
     //TODO ROB lasciare aperto così lo reucpero al prossimo giro??
     //spark.stop()
 
-    //invio notifica a predictor
-    context.actorSelection("/user/nameConsumer*") ! TrainingFinished()
+    //notify predictor in order to refresh model
+    context.actorSelection("/user/consumer"+name+"*") ! TrainingFinished()
 
     //self-message to start a new training
     self ! AbstractTrainerActor.TrainingFinished()

@@ -1,4 +1,4 @@
-package it.utiu.tapas.stream.consumer
+package it.utiu.tapas.stream.producer
 
 import scala.concurrent.ExecutionContext
 
@@ -15,6 +15,7 @@ import akka.kafka.scaladsl.Producer
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Source
 import it.utiu.tapas.util.Consts
+import it.utiu.tapas.stream.consumer.AbstractProducerActor
 
 
 

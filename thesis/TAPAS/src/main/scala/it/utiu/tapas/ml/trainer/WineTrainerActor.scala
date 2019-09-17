@@ -11,23 +11,20 @@ import org.apache.spark.sql.SparkSession
 import akka.actor.Props
 import it.utiu.tapas.base.AbstractBaseActor
 import it.utiu.tapas.base.AbstractTrainerActor
+import it.utiu.tapas.util.Consts
 
 object WineTrainerActor {
-
-  def makeAsk() = Random.nextBoolean()
-
   def props(): Props =
     Props(new WineTrainerActor())
-
-  val FILE_PATH = AbstractBaseActor.HDFS_PATH + "wine/wine.data"
 }
 
-class WineTrainerActor extends AbstractTrainerActor("Wine") {
+class WineTrainerActor extends AbstractTrainerActor(Consts.CS_WINE) {
 
   override def doInternalTraining(spark: SparkSession): MLWritable = {
 
+    
     //caricamento dataset come CSV inferendo lo schema dall'header
-    val df1 = spark.read.format("csv").option("header", "true").option("inferSchema", "true").load(WineTrainerActor.FILE_PATH)
+    val df1 = spark.read.format("csv").option("header", "true").option("inferSchema", "true").load(AbstractBaseActor.HDFS_PATH+Consts.CS_WINE+"/*")
 
     //definisco le feature e le aggiungo come colonna "features"
     val assembler = new VectorAssembler().setInputCols(Array("Alcohol", "Malic", "Ash", "Alcalinity", "Magnesium", "phenols", "Flavanoids", "Nonflavanoid", "Proanthocyanins", "Color", "Hue", "OD280", "Proline")).setOutputCol("features")
@@ -47,7 +44,7 @@ class WineTrainerActor extends AbstractTrainerActor("Wine") {
       .setRegParam(0.3)
       .setElasticNetParam(0.8)
     //      .setFamily("multinomial")
-
+      
     val modelLR = lr.fit(df2)
     val predictionsLR = modelLR.transform(testData)
     predictionsLR.select("predictedClass", "Class", "features").show(200)

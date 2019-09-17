@@ -10,10 +10,10 @@ import it.utiu.tapas.base.AbstractPredictorActor._
 
 object AbstractPredictorActor {
   case class AskPrediction(msgs: String)
-  case class TellPrediction(prediction: List[String])
+  case class TellPrediction(prediction: String)
 
 }
-abstract class AbstractPredictorActor(name: String) extends AbstractBaseActor(name) {
+abstract class AbstractPredictorActor[T <: Model[T]](name: String) extends AbstractBaseActor(name) {
   override def receive: Receive = {
 
     case AskPrediction(msgs: String) =>
@@ -23,11 +23,11 @@ abstract class AbstractPredictorActor(name: String) extends AbstractBaseActor(na
 
   
   
-  def doInternalPrediction(spark: SparkSession, model: Model[A]): String
-  def getAlgo(): MLReader
+  def doInternalPrediction(msgs: String, spark: SparkSession, model: Model[T]): String
+  def getAlgo(): MLReader[T]
   
   
-  private def doPrediction(msgs: String): List[String] = {
+  private def doPrediction(msgs: String): String = {
     
     
     val conf = new SparkConf().setAppName("TAPAS - a Timely Analytics & Predictions Actor System")
@@ -40,10 +40,10 @@ abstract class AbstractPredictorActor(name: String) extends AbstractBaseActor(na
     sc.setLogLevel("ERROR")
 
     
-    val lrModel = getAlgo().read.load(ML_MODEL_FILE)
-    println("features from loaded model " + lrModel.numFeatures)
+    val lrModel = getAlgo().load(ML_MODEL_FILE)
+    println("loaded model " + lrModel)
     
-    val prediction = doInternalPrediction(spark, lrModel)
+    val prediction = doInternalPrediction(msgs, spark, lrModel)
     
 
     //terminazione contesto

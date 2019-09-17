@@ -20,7 +20,7 @@ object AbstractProducerActor {
   val IN_PATH = "/Users/rob/UniNettuno/dataset/"
 }
 
-class AbstractProducerActor(name: String, topic: String) extends AbstractBaseActor {
+class AbstractProducerActor(name: String, topic: String) extends AbstractBaseActor(name) {
   override def receive: Receive = {
 
     case AbstractProducerActor.StartProducing() => doProduce()
@@ -41,7 +41,7 @@ class AbstractProducerActor(name: String, topic: String) extends AbstractBaseAct
     //      }
     //      .runWith(Producer.plainSink(producerSettings))
 
-    while (true) {
+//    while (true) {
 
       val file = scala.io.Source.fromFile(AbstractProducerActor.IN_PATH + name + "/" + name + ".data.input")
       val source: Source[String, NotUsed] = Source(file.getLines().toIterable.to[collection.immutable.Iterable])
@@ -54,8 +54,8 @@ class AbstractProducerActor(name: String, topic: String) extends AbstractBaseAct
         }
         .runWith(Producer.plainSink(producerSettings))
 
-      Thread.sleep(5000);
-    }
+//      Thread.sleep(5000);
+//    }
 
   }
 

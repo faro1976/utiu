@@ -26,7 +26,6 @@ import akka.kafka.Subscriptions
 import akka.kafka.scaladsl.Consumer
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Sink
-import it.utiu.tapas.ml.predictor.WineForecasterActor
 import it.utiu.tapas.base.AbstractBaseActor
 import it.utiu.tapas.base.AbstractPredictorActor
 
@@ -36,14 +35,13 @@ object AbstractConsumerActor {
 
   case class StartConsuming()
 
-
-  val COLS_NUM = 14
-  val BUFF_SIZE = 5
   
+  val BUFF_SIZE = 5
+ 
   
 }
 
-class AbstractConsumerActor(name: String, header: String, predictor: ActorRef, topic: String) extends AbstractBaseActor {
+abstract class AbstractConsumerActor(name: String, topic: String, predictor: ActorRef, header: String, colsNum: Int) extends AbstractBaseActor(name) {
   override def receive: Receive = {
 
     case AbstractConsumerActor.StartConsuming()             => doConsuming()
@@ -61,7 +59,7 @@ class AbstractConsumerActor(name: String, header: String, predictor: ActorRef, t
 
     val consumerSettings = ConsumerSettings(context.system, new ByteArrayDeserializer, new StringDeserializer)
       .withBootstrapServers("localhost:9092")
-      .withGroupId(groupId)
+      .withGroupId(AbstractBaseActor.groupId)
     //      .withProperty(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest")  //read from beginnig
 
     val done =
@@ -70,7 +68,7 @@ class AbstractConsumerActor(name: String, header: String, predictor: ActorRef, t
           val strMsg = msg.value
           println(s"value: ${strMsg}")
           val tokens = strMsg.split(",")
-          if (tokens.size == COLS_NUM) {
+          if (tokens.size == colsNum) {
             //messaggio consuntivo
             buffer.append(strMsg)
             if (buffer.size == BUFF_SIZE) {
