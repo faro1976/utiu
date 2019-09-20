@@ -46,10 +46,6 @@ class ActivityPredictorActor() extends AbstractPredictorActor[LogisticRegression
     predictions.show()
     val ret = predictions.select("predictedLabel").collect().map(_(0)).toList
 
-    //terminazione contesto
-    //TODO ROB lasciare aperto così lo reucpero al prossimo giro??
-    //    spark.stop()
-
     return ret.asInstanceOf[List[String]](0)
   }
 

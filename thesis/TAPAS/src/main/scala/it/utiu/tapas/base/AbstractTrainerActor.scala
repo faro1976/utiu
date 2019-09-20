@@ -17,11 +17,12 @@ abstract class AbstractTrainerActor(name: String) extends AbstractBaseActor(name
   override def receive: Receive = {
 
     case StartTraining() =>
-      println("entro")
       doTraining()
 
     case TrainingFinished() =>
-      println("restart")
+      println("training restart waiting...")
+      Thread.sleep(30000)
+      println("training restart")
       doTraining()
 
   }
@@ -30,8 +31,8 @@ abstract class AbstractTrainerActor(name: String) extends AbstractBaseActor(name
 
     //spark init
     val conf = new SparkConf()
-      .setAppName("wine")
-      .setMaster(AbstractBaseActor.SPARK_URL)
+      .setAppName(name+"-training")
+      .setMaster(AbstractBaseActor.SPARK_URL_TRAINING)
     val spark = SparkSession.builder
       .config(conf)
       .getOrCreate()

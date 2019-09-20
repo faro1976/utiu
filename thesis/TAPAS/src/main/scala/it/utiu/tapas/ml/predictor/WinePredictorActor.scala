@@ -63,11 +63,7 @@ class WinePredictorActor() extends AbstractPredictorActor[LogisticRegressionMode
     predictions.show()
     val ret = predictions.select("predictedClass").collect().map(_(0)).toList
 
-    //terminazione contesto
-    //TODO ROB lasciare aperto così lo reucpero al prossimo giro??
-    //    spark.stop()
-
-    return ret.asInstanceOf[List[String]](0)
+    return ret.asInstanceOf[List[Double]](0).toString()
   }
 
   

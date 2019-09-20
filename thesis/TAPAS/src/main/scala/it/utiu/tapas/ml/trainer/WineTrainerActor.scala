@@ -24,7 +24,7 @@ class WineTrainerActor extends AbstractTrainerActor(Consts.CS_WINE) {
 
     
     //caricamento dataset come CSV inferendo lo schema dall'header
-    val df1 = spark.read.format("csv").option("header", "true").option("inferSchema", "true").load(AbstractBaseActor.HDFS_PATH+Consts.CS_WINE+"/*")
+    val df1 = spark.read.format("csv").option("header", "true").option("inferSchema", "true").load(HDFS_CS_PATH+"*")
 
     //definisco le feature e le aggiungo come colonna "features"
     val assembler = new VectorAssembler().setInputCols(Array("Alcohol", "Malic", "Ash", "Alcalinity", "Magnesium", "phenols", "Flavanoids", "Nonflavanoid", "Proanthocyanins", "Color", "Hue", "OD280", "Proline")).setOutputCol("features")
@@ -47,7 +47,7 @@ class WineTrainerActor extends AbstractTrainerActor(Consts.CS_WINE) {
       
     val modelLR = lr.fit(df2)
     val predictionsLR = modelLR.transform(testData)
-    predictionsLR.select("predictedClass", "Class", "features").show(200)
+    predictionsLR.select("predictedClass", "Class", "features").show(5)
 
     val evaluator = new MulticlassClassificationEvaluator()
       .setLabelCol("Class")

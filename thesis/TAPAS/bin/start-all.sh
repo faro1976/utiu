@@ -16,3 +16,4 @@ sleep 5
 cd $FWK_PATH/hadoop-2.9.2
 nohup sbin/start-dfs.sh &
 
+jps

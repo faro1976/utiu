@@ -24,7 +24,7 @@ class ActivityTrainerActor extends AbstractTrainerActor(Consts.CS_ACTIVITY) {
 
     
     //caricamento dataset come CSV inferendo lo schema dall'header
-    val df1 = spark.read.format("csv").option("header", "false").option("inferSchema", "true").load(AbstractBaseActor.HDFS_PATH+Consts.CS_ACTIVITY+"/*")
+    val df1 = spark.read.format("csv").option("header", "false").option("inferSchema", "true").load(HDFS_CS_PATH+"*")
 
     //definisco le feature e le aggiungo come colonna "features"
     val assembler = new VectorAssembler().setInputCols(Array("_1","_2","_3","_4","_5","_6","_7","_8")).setOutputCol("features")

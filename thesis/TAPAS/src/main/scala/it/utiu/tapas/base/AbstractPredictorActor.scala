@@ -6,6 +6,8 @@ import org.apache.spark.ml.Model
 import org.apache.spark.ml.util.MLReader
 import org.apache.spark.SparkConf
 import it.utiu.tapas.base.AbstractPredictorActor._
+import java.util.Date
+import org.apache.spark.ml.classification.LogisticRegressionModel
 
 
 object AbstractPredictorActor {
@@ -30,8 +32,8 @@ abstract class AbstractPredictorActor[T <: Model[T]](name: String) extends Abstr
   private def doPrediction(msgs: String): String = {
     
     
-    val conf = new SparkConf().setAppName("TAPAS - a Timely Analytics & Predictions Actor System")
-      .setMaster("local")
+    val conf = new SparkConf().setAppName(name+"-prediction")
+      .setMaster(AbstractBaseActor.SPARK_URL_PREDICTION)
       
     val spark = SparkSession.builder
       .config(conf)
@@ -39,7 +41,7 @@ abstract class AbstractPredictorActor[T <: Model[T]](name: String) extends Abstr
     val sc = spark.sparkContext
     sc.setLogLevel("ERROR")
 
-    
+    println("loading model "+ML_MODEL_FILE+" ...")    
     val lrModel = getAlgo().load(ML_MODEL_FILE)
     println("loaded model " + lrModel)
     
@@ -50,7 +52,7 @@ abstract class AbstractPredictorActor[T <: Model[T]](name: String) extends Abstr
     //TODO ROB lasciare aperto così lo reucpero al prossimo giro??    
 //    spark.stop()
     
-
+    println(new Date())
     return prediction
   }  
 }

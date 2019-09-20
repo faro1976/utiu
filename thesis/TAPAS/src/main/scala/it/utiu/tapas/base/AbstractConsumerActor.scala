@@ -58,7 +58,7 @@ abstract class AbstractConsumerActor(name: String, topic: String, predictor: Act
     implicit val executionContext: ExecutionContext = context.system.dispatcher
 
     val consumerSettings = ConsumerSettings(context.system, new ByteArrayDeserializer, new StringDeserializer)
-      .withBootstrapServers("localhost:9092")
+      .withBootstrapServers(AbstractBaseActor.kafkaBootstrapServers)
       .withGroupId(AbstractBaseActor.groupId)
     //      .withProperty(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest")  //read from beginnig
 
@@ -73,7 +73,7 @@ abstract class AbstractConsumerActor(name: String, topic: String, predictor: Act
             buffer.append(strMsg)
             if (buffer.size == BUFF_SIZE) {
               try {
-                val path = new Path(AbstractBaseActor.HDFS_PATH+name+"/"+name+ "." + new Date().getTime)
+                val path = new Path(HDFS_CS_PATH+name+"."+new Date().getTime)
                 val conf = new Configuration()
                 val fs = FileSystem.get(new URI(AbstractBaseActor.HDFS_URL), conf);
                 val out = fs.create(path)

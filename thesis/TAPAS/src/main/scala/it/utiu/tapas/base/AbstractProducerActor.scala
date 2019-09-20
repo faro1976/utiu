@@ -17,7 +17,7 @@ object AbstractProducerActor {
 
   case class StartProducing()
 
-  val IN_PATH = "/Users/rob/UniNettuno/dataset/"
+
 }
 
 class AbstractProducerActor(name: String, topic: String) extends AbstractBaseActor(name) {
@@ -30,7 +30,7 @@ class AbstractProducerActor(name: String, topic: String) extends AbstractBaseAct
     implicit val materializer: ActorMaterializer = ActorMaterializer()
     implicit val executionContext: ExecutionContext = context.system.dispatcher
     val producerSettings = ProducerSettings(context.system, new ByteArraySerializer, new StringSerializer)
-      .withBootstrapServers("localhost:9092")
+      .withBootstrapServers(AbstractBaseActor.kafkaBootstrapServers)
 
     //    val done = Source(1 to 100)
     //
@@ -43,7 +43,7 @@ class AbstractProducerActor(name: String, topic: String) extends AbstractBaseAct
 
 //    while (true) {
 
-      val file = scala.io.Source.fromFile(AbstractProducerActor.IN_PATH + name + "/" + name + ".data.input")
+      val file = scala.io.Source.fromFile(RT_INPUT_FILE)
       val source: Source[String, NotUsed] = Source(file.getLines().toIterable.to[collection.immutable.Iterable])
 
       val done = source
