@@ -30,18 +30,9 @@ class AbstractProducerActor(name: String, topic: String) extends AbstractBaseAct
     implicit val materializer: ActorMaterializer = ActorMaterializer()
     implicit val executionContext: ExecutionContext = context.system.dispatcher
     val producerSettings = ProducerSettings(context.system, new ByteArraySerializer, new StringSerializer)
-      .withBootstrapServers(AbstractBaseActor.kafkaBootstrapServers)
+      .withBootstrapServers(AbstractBaseActor.KAFKA_BOOT_SVR)
 
-    //    val done = Source(1 to 100)
-    //
-    //      .map(_.toString)
-    //      .map { elem =>
-    //        println(2)
-    //        new ProducerRecord[Array[Byte], String](AbstractProducerActor.topic1, elem)
-    //      }
-    //      .runWith(Producer.plainSink(producerSettings))
-
-//    while (true) {
+    while (true) {
 
       val file = scala.io.Source.fromFile(RT_INPUT_FILE)
       val source: Source[String, NotUsed] = Source(file.getLines().toIterable.to[collection.immutable.Iterable])
@@ -54,8 +45,8 @@ class AbstractProducerActor(name: String, topic: String) extends AbstractBaseAct
         }
         .runWith(Producer.plainSink(producerSettings))
 
-//      Thread.sleep(5000);
-//    }
+      Thread.sleep(10000);
+    }
 
   }
 

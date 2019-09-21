@@ -24,8 +24,6 @@ class WinePredictorActor() extends AbstractPredictorActor[LogisticRegressionMode
   override def doInternalPrediction(msgs: String, spark: SparkSession, model: Model[LogisticRegressionModel]): String = {
     val lrModel = model.asInstanceOf[LogisticRegressionModel]
 
-    println("features from loaded model " + lrModel.numFeatures)
-
     //cast to List[List[Double]]
     val buffInput = new ListBuffer[List[Double]]()
     //    msgs.foreach(m=>buffInput.append(m.split(",").map(_.).toList))

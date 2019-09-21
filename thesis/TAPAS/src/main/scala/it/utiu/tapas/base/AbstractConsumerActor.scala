@@ -58,22 +58,22 @@ abstract class AbstractConsumerActor(name: String, topic: String, predictor: Act
     implicit val executionContext: ExecutionContext = context.system.dispatcher
 
     val consumerSettings = ConsumerSettings(context.system, new ByteArrayDeserializer, new StringDeserializer)
-      .withBootstrapServers(AbstractBaseActor.kafkaBootstrapServers)
-      .withGroupId(AbstractBaseActor.groupId)
+      .withBootstrapServers(AbstractBaseActor.KAFKA_BOOT_SVR)
+      .withGroupId(AbstractBaseActor.KAFKA_GROUP_ID)
     //      .withProperty(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest")  //read from beginnig
 
     val done =
       Consumer.plainSource(consumerSettings, Subscriptions.topics(topic))
         .mapAsync(1) { msg =>
           val strMsg = msg.value
-          println(s"value: ${strMsg}")
+//          println(s"value: ${strMsg}")
           val tokens = strMsg.split(",")
           if (tokens.size == colsNum) {
             //messaggio consuntivo
             buffer.append(strMsg)
             if (buffer.size == BUFF_SIZE) {
               try {
-                val path = new Path(HDFS_CS_PATH+name+"."+new Date().getTime)
+                val path = new Path(HDFS_CS_PATH+name+".input."+new Date().getTime)
                 val conf = new Configuration()
                 val fs = FileSystem.get(new URI(AbstractBaseActor.HDFS_URL), conf);
                 val out = fs.create(path)

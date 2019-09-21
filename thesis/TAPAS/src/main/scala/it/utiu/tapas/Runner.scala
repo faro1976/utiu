@@ -13,6 +13,10 @@ import it.utiu.tapas.ml.predictor.WinePredictorActor
 import it.utiu.tapas.stream.producer.WineProducerActor
 import it.utiu.tapas.stream.consumer.AbstractProducerActor
 import it.utiu.tapas.stream.consumer.AbstractConsumerActor
+import it.utiu.tapas.stream.producer.ActivityProducerActor
+import it.utiu.tapas.stream.consumer.ActivityConsumerActor
+import it.utiu.tapas.ml.predictor.ActivityPredictorActor
+import it.utiu.anavis.ActivityTrainerActor
 
 
 /**
@@ -31,22 +35,40 @@ object App {
 }
 
 class App(system: ActorSystem) {
-  var trainerRef: ActorRef = null
-  var predictorRef: ActorRef = null
-  var consumerRef: ActorRef = null
-  var producerRef: ActorRef = null
+  var wineTrainerRef: ActorRef = null
+  var winePredictorRef: ActorRef = null
+  var wineConsumerRef: ActorRef = null
+  var wineProducerRef: ActorRef = null
+  
+  var activityTrainerRef: ActorRef = null
+  var activityPredictorRef: ActorRef = null
+  var activityConsumerRef: ActorRef = null
+  var activityProducerRef: ActorRef = null
+  
 
   def run(): Unit = {
-    trainerRef = system.actorOf(WineTrainerActor.props(), "trainer")
-    predictorRef = system.actorOf(WinePredictorActor.props(), "predictor")
-    consumerRef = system.actorOf(WineConsumerActor.props(predictorRef), "consumer")
-    producerRef = system.actorOf(WineProducerActor.props(), "producer")
+    wineTrainerRef = system.actorOf(WineTrainerActor.props(), "trainer-wine")
+    winePredictorRef = system.actorOf(WinePredictorActor.props(), "predictor-wine")
+    wineConsumerRef = system.actorOf(WineConsumerActor.props(winePredictorRef), "consumer-wine")
+    wineProducerRef = system.actorOf(WineProducerActor.props(), "producer-wine")
 
-//    trainerRef ! AbstractTrainerActor.StartTraining()
-    Thread.sleep(3000)
-    consumerRef ! AbstractConsumerActor.StartConsuming()
+    activityTrainerRef = system.actorOf(ActivityTrainerActor.props(), "trainer-activity")
+    activityPredictorRef = system.actorOf(ActivityPredictorActor.props(), "predictor-activity")
+    activityConsumerRef = system.actorOf(ActivityConsumerActor.props(activityPredictorRef), "consumer-activity")
+    activityProducerRef = system.actorOf(ActivityProducerActor.props(), "producer-activity")
+    
+//    wineTrainerRef ! AbstractTrainerActor.StartTraining()
+//    Thread.sleep(2000)
+//    wineConsumerRef ! AbstractConsumerActor.StartConsuming()
+//    Thread.sleep(10000)
+//    wineProducerRef ! AbstractProducerActor.StartProducing()
+
+    activityTrainerRef ! AbstractTrainerActor.StartTraining()
+    Thread.sleep(2000)
+    activityConsumerRef ! AbstractConsumerActor.StartConsuming()
     Thread.sleep(10000)
-    producerRef ! AbstractProducerActor.StartProducing()
+    activityProducerRef ! AbstractProducerActor.StartProducing()    
+    
     Await.ready(system.whenTerminated, Duration.Inf)
   }
 

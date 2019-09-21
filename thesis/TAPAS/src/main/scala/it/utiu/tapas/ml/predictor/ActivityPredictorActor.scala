@@ -24,8 +24,6 @@ class ActivityPredictorActor() extends AbstractPredictorActor[LogisticRegression
   override def doInternalPrediction(msgs: String, spark: SparkSession, model: Model[LogisticRegressionModel]): String = {
     val lrModel = model.asInstanceOf[LogisticRegressionModel]
 
-    println("features from loaded model " + lrModel.numFeatures)
-
     //cast to List[List[Double]]
     val buffInput = new ListBuffer[List[Double]]()
     //    msgs.foreach(m=>buffInput.append(m.split(",").map(_.).toList))
@@ -46,7 +44,7 @@ class ActivityPredictorActor() extends AbstractPredictorActor[LogisticRegression
     predictions.show()
     val ret = predictions.select("predictedLabel").collect().map(_(0)).toList
 
-    return ret.asInstanceOf[List[String]](0)
+    return ret.asInstanceOf[List[Double]](0).toString()
   }
 
   

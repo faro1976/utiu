@@ -22,9 +22,8 @@ abstract class AbstractTrainerActor(name: String) extends AbstractBaseActor(name
     case TrainingFinished() =>
       println("training restart waiting...")
       Thread.sleep(30000)
-      println("training restart")
+      println("restart training")
       doTraining()
-
   }
 
   private def doTraining() {
@@ -41,14 +40,16 @@ abstract class AbstractTrainerActor(name: String) extends AbstractBaseActor(name
 
     val ml = doInternalTraining(spark)
     //salvataggio modello su file system
-    ml.write.overwrite().save(ML_MODEL_FILE)
+    println("saving ml model into "+ML_MODEL_FILE+"...")
+    ml.write.overwrite().save(ML_MODEL_FILE)    
+    println("saved ml model into "+ML_MODEL_FILE+"...")
 
     //terminazione contesto
     //TODO ROB lasciare aperto così lo reucpero al prossimo giro??
     //spark.stop()
 
     //notify predictor in order to refresh model
-    context.actorSelection("/user/consumer"+name+"*") ! TrainingFinished()
+    context.actorSelection("/user/predictor-"+name/*+"*"*/) ! TrainingFinished()
 
     //self-message to start a new training
     self ! AbstractTrainerActor.TrainingFinished()

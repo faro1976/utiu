@@ -8,6 +8,12 @@ import org.apache.spark.SparkConf
 import it.utiu.tapas.base.AbstractPredictorActor._
 import java.util.Date
 import org.apache.spark.ml.classification.LogisticRegressionModel
+import java.nio.file.Files
+import java.nio.file.Path
+import java.nio.file.Paths
+import java.nio.file.StandardCopyOption
+import org.apache.commons.io.FileUtils
+import java.io.File
 
 
 object AbstractPredictorActor {
@@ -16,11 +22,20 @@ object AbstractPredictorActor {
 
 }
 abstract class AbstractPredictorActor[T <: Model[T]](name: String) extends AbstractBaseActor(name) {
+  var lrModel: Model[T] = null
+  
   override def receive: Receive = {
 
     case AskPrediction(msgs: String) =>
-
       sender ! TellPrediction(doPrediction(msgs))
+      
+    case AbstractTrainerActor.TrainingFinished() =>
+      println("loading model "+ML_MODEL_FILE_COPY+" ...")
+      FileUtils.deleteDirectory(new File(ML_MODEL_FILE_COPY))
+      FileUtils.copyDirectory(new File(ML_MODEL_FILE), new File(ML_MODEL_FILE_COPY), true);
+//      Files.copy(StandardCopyOption.REPLACE_EXISTING)
+      lrModel = getAlgo().load(ML_MODEL_FILE_COPY)
+      println("loaded model "+ML_MODEL_FILE_COPY)
   }
 
   
@@ -30,7 +45,7 @@ abstract class AbstractPredictorActor[T <: Model[T]](name: String) extends Abstr
   
   
   private def doPrediction(msgs: String): String = {
-    
+    if (lrModel==null) return "ML model not created yet!"    
     
     val conf = new SparkConf().setAppName(name+"-prediction")
       .setMaster(AbstractBaseActor.SPARK_URL_PREDICTION)
@@ -39,20 +54,14 @@ abstract class AbstractPredictorActor[T <: Model[T]](name: String) extends Abstr
       .config(conf)
       .getOrCreate()
     val sc = spark.sparkContext
-    sc.setLogLevel("ERROR")
-
-    println("loading model "+ML_MODEL_FILE+" ...")    
-    val lrModel = getAlgo().load(ML_MODEL_FILE)
-    println("loaded model " + lrModel)
+    sc.setLogLevel("ERROR")        
     
-    val prediction = doInternalPrediction(msgs, spark, lrModel)
-    
+    val prediction = doInternalPrediction(msgs, spark, lrModel)    
 
     //terminazione contesto
     //TODO ROB lasciare aperto così lo reucpero al prossimo giro??    
 //    spark.stop()
     
-    println(new Date())
     return prediction
   }  
 }
