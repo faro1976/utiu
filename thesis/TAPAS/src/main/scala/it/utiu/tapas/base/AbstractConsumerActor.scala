@@ -72,6 +72,7 @@ abstract class AbstractConsumerActor(name: String, topic: String, predictor: Act
             //messaggio consuntivo
             buffer.append(strMsg)
             if (buffer.size == BUFF_SIZE) {
+              println("dump "+buffer.size+ " input messages to file system...")
               try {
                 val path = new Path(HDFS_CS_PATH+name+".input."+new Date().getTime)
                 val conf = new Configuration()
