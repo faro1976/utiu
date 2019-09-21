@@ -22,7 +22,7 @@ class ActivityTrainerActor extends AbstractTrainerActor(Consts.CS_ACTIVITY) {
 
   override def doInternalTraining(spark: SparkSession): MLWritable = {
     //caricamento dataset come CSV inferendo lo schema dall'header
-    val df1 = spark.read.format("csv").option("header", "false").option("inferSchema", "true").load(HDFS_CS_PATH+"/S1_Dataset*").toDF()
+    val df1 = spark.read.format("csv").option("header", "false").option("inferSchema", "true").load(HDFS_CS_PATH+"/S1_Dataset*").toDF("_1","_2","_3","_4","_5","_6","_7","_8","_9")
     df1.show
 
     //definisco le feature e le aggiungo come colonna "features"
