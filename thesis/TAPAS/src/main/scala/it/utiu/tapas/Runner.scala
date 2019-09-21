@@ -17,6 +17,7 @@ import it.utiu.tapas.stream.producer.ActivityProducerActor
 import it.utiu.tapas.stream.consumer.ActivityConsumerActor
 import it.utiu.tapas.ml.predictor.ActivityPredictorActor
 import it.utiu.anavis.ActivityTrainerActor
+import it.utiu.anavis.BTCTrainerActor
 
 
 /**
@@ -45,6 +46,8 @@ class App(system: ActorSystem) {
   var activityConsumerRef: ActorRef = null
   var activityProducerRef: ActorRef = null
   
+  var btcTrainerRef: ActorRef = null
+  
 
   def run(): Unit = {
     wineTrainerRef = system.actorOf(WineTrainerActor.props(), "trainer-wine")
@@ -57,17 +60,22 @@ class App(system: ActorSystem) {
     activityConsumerRef = system.actorOf(ActivityConsumerActor.props(activityPredictorRef), "consumer-activity")
     activityProducerRef = system.actorOf(ActivityProducerActor.props(), "producer-activity")
     
+    btcTrainerRef = system.actorOf(BTCTrainerActor.props(), "btc-activity")
+    
+    
 //    wineTrainerRef ! AbstractTrainerActor.StartTraining()
 //    Thread.sleep(2000)
 //    wineConsumerRef ! AbstractConsumerActor.StartConsuming()
 //    Thread.sleep(10000)
 //    wineProducerRef ! AbstractProducerActor.StartProducing()
 
-    activityTrainerRef ! AbstractTrainerActor.StartTraining()
-    Thread.sleep(2000)
-    activityConsumerRef ! AbstractConsumerActor.StartConsuming()
-    Thread.sleep(10000)
-    activityProducerRef ! AbstractProducerActor.StartProducing()    
+//    activityTrainerRef ! AbstractTrainerActor.StartTraining()
+//    Thread.sleep(2000)
+//    activityConsumerRef ! AbstractConsumerActor.StartConsuming()
+//    Thread.sleep(10000)
+//    activityProducerRef ! AbstractProducerActor.StartProducing()    
+
+    btcTrainerRef ! AbstractTrainerActor.StartTraining()    
     
     Await.ready(system.whenTerminated, Duration.Inf)
   }

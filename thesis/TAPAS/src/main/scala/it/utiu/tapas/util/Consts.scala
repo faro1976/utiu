@@ -1,5 +1,6 @@
 package it.utiu.tapas.util
 
+//TODO ROB trasformare in 2 enums
 object Consts {
   //list of all case study labels 
   val CS_WINE = "wine"
@@ -9,4 +10,5 @@ object Consts {
 //list of all kafka topics
   val TOPIC_WINE = "wine"
   val TOPIC_ACTIVITY = "activity"
+  val TOPIC_BTC = "btc"
 }
