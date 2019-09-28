@@ -27,6 +27,9 @@ import org.apache.spark.mllib.util.MLUtils
 import org.apache.spark.sql.SQLContext
 import org.apache.spark.{ SparkConf, SparkContext }
 import org.apache.spark.ml.linalg.Vector
+import java.text.SimpleDateFormat
+import org.apache.spark.sql.Dataset
+import org.apache.spark.sql.{DataFrame, SparkSession}
 
 object BTCTrainerActor {
   def props(): Props =
@@ -34,17 +37,31 @@ object BTCTrainerActor {
 }
 
 class BTCTrainerActor extends AbstractTrainerActor(Consts.CS_BTC) {
-
+  def printWindow(windowDF:DataFrame, aggCol:String) ={
+      windowDF.sort("window.start").
+      select("window.start","window.end",s"$aggCol").
+      show(truncate = false)
+   }
   override def doInternalTraining(spark: SparkSession): MLWritable = {
+    import org.apache.spark.sql.functions._
+    
     //caricamento dataset come CSV inferendo lo schema dall'header
-    val df1 = spark.read.json(HDFS_CS_PATH + "*")
+    val df1 = spark.read.json(HDFS_CS_PATH + "blockchair/*")
     df1.show
     df1.printSchema()
     import spark.implicits._
-    val df3 = df1.select("data.transactions_24h", "data.difficulty", "data.volume_24h", "data.mempool_transactions", "data.mempool_size", "data.mempool_tps", "data.mempool_total_fee_usd", "data.average_transaction_fee_24h", "data.nodes", "data.inflation_usd_24h", "data.average_transaction_fee_usd_24h", "data.market_price_usd", "data.next_difficulty_estimate", "data.suggested_transaction_fee_per_byte_sat")
-    //    val df3 = df2.withColumn("hashrate_24h_l", df2.col("hashrate_24h").cast("long"))
-    //    df3.show
-
+    val df2 = df1.select("context.cache.since","data.transactions_24h", "data.difficulty", "data.volume_24h", "data.mempool_transactions", "data.mempool_size", "data.mempool_tps", "data.mempool_total_fee_usd", "data.average_transaction_fee_24h", "data.nodes", "data.inflation_usd_24h", "data.average_transaction_fee_usd_24h", "data.market_price_usd", "data.next_difficulty_estimate", "data.suggested_transaction_fee_per_byte_sat")
+    
+    val dfHourlyWindow = df2
+      .groupBy(window(df2.col("since"),"1 hour"))
+      .agg(avg("market_price_usd").as("hourly_average_price"))      
+    dfHourlyWindow.show()
+    //shift end to next minute adding 60 secs
+    val timeUdf = udf{(time: java.sql.Timestamp) => new java.sql.Timestamp(time.getTime + 60*1000)}
+    val df3 = df2.withColumn("end", date_format(to_date(timeUdf(col("since")), "yyyy-MM-dd HH:mm:ss"), "yyyy-MM-dd HH:00:00"))
+      .join(dfHourlyWindow, col("end") === col("window.end"))
+      
+      
     //CORRELATION MATRIX
     //    val assembler = new VectorAssembler().setInputCols(Array("transactions_24h", "difficulty", "volume_24h", "mempool_transactions", "mempool_size", "mempool_tps", "mempool_total_fee_usd", "average_transaction_fee_24h", "nodes", "inflation_usd_24h", "average_transaction_fee_usd_24h", "market_price_usd", "next_difficulty_estimate", "suggested_transaction_fee_per_byte_sat")).setOutputCol("features").setHandleInvalid("keep")
     //    val df4 = assembler.transform(df3)
@@ -100,7 +117,7 @@ class BTCTrainerActor extends AbstractTrainerActor(Consts.CS_BTC) {
       (prediction, point.getAs[Double]("label"))
     }
     
-    //stampa statistiche
+    //print ml evaluation
      val evaluator = new RegressionEvaluator()
       .setLabelCol("label")
       .setPredictionCol("prediction")
@@ -120,6 +137,29 @@ class BTCTrainerActor extends AbstractTrainerActor(Consts.CS_BTC) {
     val mae = evaluator.evaluate(predictions)
     println(s"Mean absolute error: $mae")    
     
+    //analytics
+    //difficulty, nodes, mempool_transactions, market_price_usd
+    //transactions_24h, volume_24h, average_transaction_fee_24h, inflation_usd_24h    
+    //group by date and average
+    
+//    val sdf1 = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
+//    val sdf2 = new SimpleDateFormat("yyyy-MM-dd")
+    //add yyyy-MM-dd date 
+    val dfAnalyticsPre = df3.withColumn("date_only", date_format(to_date(col("since"), "yyyy-MM-dd HH:mm:ss"), "yyyy-MM-dd"))
+    dfAnalyticsPre.show()
+    //instant values, compute average
+    val dfInst = dfAnalyticsPre.groupBy("date_only").agg(mean("difficulty").as("avgDifficulty"), mean("nodes").as("avgNodes"), mean("mempool_transactions").as("avgMempoolTxs"), mean("market_price_usd").as("avgPriceUSD"))
+    //last 24hh values, get the later value of day
+    val dfKeysLast24 = dfAnalyticsPre.groupBy("date_only").agg(max("since").as("since"))
+    dfKeysLast24.show()
+    //extract last24hh values by key of later in day value
+    val dfLast24 = dfAnalyticsPre.join(dfKeysLast24, "since")
+    dfLast24.show()
+    //join average and later in day values
+    val dfJoineddfAnalytics =  dfInst.join(dfLast24, "date_only")
+    dfJoineddfAnalytics.show()
+    
+    dfJoineddfAnalytics.sort("date_only").write.csv(ANALYTICS_OUTPUT_FILE)
     
     return modelGBT
   }

@@ -1,7 +1,6 @@
 package it.utiu.tapas.stream.consumer
 
 import java.io.PrintWriter
-
 import java.net.URI
 import java.util.Date
 
@@ -17,10 +16,7 @@ import org.apache.kafka.common.serialization.ByteArrayDeserializer
 import org.apache.kafka.common.serialization.StringDeserializer
 
 import akka.Done
-import akka.actor.Actor
-import akka.actor.ActorLogging
 import akka.actor.ActorRef
-import akka.actor.Props
 import akka.kafka.ConsumerSettings
 import akka.kafka.Subscriptions
 import akka.kafka.scaladsl.Consumer
@@ -28,31 +24,33 @@ import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Sink
 import it.utiu.tapas.base.AbstractBaseActor
 import it.utiu.tapas.base.AbstractPredictorActor
+import it.utiu.tapas.stream.consumer.AbstractConsumerActor.BUFF_SIZE
 
-import it.utiu.tapas.stream.consumer.AbstractConsumerActor._
 
 object AbstractConsumerActor {
-
+  //start consuming message
   case class StartConsuming()
-
-  
+  //max buffered items to store 
   val BUFF_SIZE = 5
- 
-  
 }
+
 
 abstract class AbstractConsumerActor(name: String, topic: String, predictor: ActorRef, header: String, colsNum: Int) extends AbstractBaseActor(name) {
   override def receive: Receive = {
-
-    case AbstractConsumerActor.StartConsuming()             => doConsuming()
+    //start consuming message
+    case AbstractConsumerActor.StartConsuming()            => doConsuming()
+    //received prediction message
     case AbstractPredictorActor.TellPrediction(prediction) => println("received prediction: " + prediction)
   }
 
+  //buffered messages to store
   val buffer = ArrayBuffer[String]()
+  
+  //internal
   def doInternalConsuming()
+
   
   private def doConsuming() {
-
 
     implicit val materializer: ActorMaterializer = ActorMaterializer()
     implicit val executionContext: ExecutionContext = context.system.dispatcher
@@ -66,20 +64,20 @@ abstract class AbstractConsumerActor(name: String, topic: String, predictor: Act
       Consumer.plainSource(consumerSettings, Subscriptions.topics(topic))
         .mapAsync(1) { msg =>
           val strMsg = msg.value
-//          println(s"value: ${strMsg}")
+          //println(s"value: ${strMsg}")
           val tokens = strMsg.split(",")
           if (tokens.size == colsNum) {
-            //messaggio consuntivo
+            //input for training action
             buffer.append(strMsg)
             if (buffer.size == BUFF_SIZE) {
-              println("dump "+buffer.size+ " input messages to file system...")
+              println("dump " + buffer.size + " input messages to file system...")
               try {
-                val path = new Path(HDFS_CS_PATH+name+".input."+new Date().getTime)
+                val path = new Path(HDFS_CS_PATH + name + ".input." + new Date().getTime)
                 val conf = new Configuration()
                 val fs = FileSystem.get(new URI(AbstractBaseActor.HDFS_URL), conf);
                 val out = fs.create(path)
                 val pw = new PrintWriter(out)
-                if (header!=null&header.size>0) pw.write(header + Properties.lineSeparator)
+                if (header != null & header.size > 0) pw.write(header + Properties.lineSeparator)
                 buffer.foreach(i => pw.write(i + Properties.lineSeparator))
                 pw.close()
                 out.close()
@@ -90,7 +88,7 @@ abstract class AbstractConsumerActor(name: String, topic: String, predictor: Act
               buffer.clear()
             }
           } else {
-            //messaggio preventivo
+            //one field is missing: input for prediction action
             println("request prediction for: " + strMsg)
             predictor ! AbstractPredictorActor.AskPrediction(strMsg)
           }
@@ -99,10 +97,5 @@ abstract class AbstractConsumerActor(name: String, topic: String, predictor: Act
         .runWith(Sink.ignore)
 
     done.onComplete(_ => return )
-
   }
-
-  private def reloadModel() {
-  }
-
 }

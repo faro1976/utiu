@@ -16,7 +16,8 @@ import akka.actor.Props
 import akka.actor.AbstractActor.Receive
 import akka.actor.Actor
 import akka.actor.ActorLogging
-import it.utiu.anavis.BTCPriceTrainerActor
+import it.utiu.anavis.BTCTrainerActor
+import it.utiu.tapas.base.AbstractTrainerActor
 
 
 object BTCConsumerActor {
@@ -36,8 +37,8 @@ object BTCConsumerActor {
   class BTCConsumerActor extends Actor with ActorLogging {
     override def receive: Receive = {
 
-        case BTCConsumerActor.StartConsuming() => doConsuming()
-        case BTCPriceTrainerActor.TrainingFinished => reloadModel()
+        case AbstractConsumerActor.StartConsuming() => doConsuming()
+        case AbstractTrainerActor.TrainingFinished => reloadModel()
     }
     
     private def doConsuming() {
