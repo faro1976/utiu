@@ -46,7 +46,8 @@ class BTCTrainerActor extends AbstractTrainerActor(Consts.CS_BTC) {
     import org.apache.spark.sql.functions._
     
     //caricamento dataset come CSV inferendo lo schema dall'header
-    val df1 = spark.read.json(HDFS_CS_PATH + "blockchair/*")
+//    val df1 = spark.read.json(HDFS_CS_PATH + "blockchair/*")
+    val df1 = spark.read.json(HDFS_CS_PATH + "blockchair/small/*")
     df1.show
     df1.printSchema()
     import spark.implicits._
@@ -57,12 +58,30 @@ class BTCTrainerActor extends AbstractTrainerActor(Consts.CS_BTC) {
       .agg(avg("market_price_usd").as("hourly_average_price"))      
     dfHourlyWindow.show()
     //shift end to next minute adding 60 secs
-    val timeUdf = udf{(time: java.sql.Timestamp) => new java.sql.Timestamp(time.getTime + 60*1000)}
-    val df3 = df2.withColumn("end", date_format(to_date(timeUdf(col("since")), "yyyy-MM-dd HH:mm:ss"), "yyyy-MM-dd HH:00:00"))
-      .join(dfHourlyWindow, col("end") === col("window.end"))
+//    val df3 = df2.withColumn("end", date_format(to_date(timeUdf(col("since")), "yyyy-MM-dd HH:mm:ss"), "yyyy-MM-dd HH:00:00"))
+    //reset minutes and seconds, then shift to next hour
+//    val df3 = df2.withColumn("end", (col("since")-minute(col("since"))-second(col("since"))+expr("INTERVAL 1 HOURS")))
+//    val df3_1 = df2.withColumn("next_hour", date_trunc("HOUR", col("since")+expr("INTERVAL 1 HOURS"))).select(col("since"), col("next_hour"), col("hourly_average_price").as("next_avg_price"))
+    val df3_1 = df2.withColumn("next_hour", date_trunc("HOUR", col("since")+expr("INTERVAL 1 HOURS")))
+    //and at the end join by window start time
+//      .join(dfHourlyWindow, col("next_hour") === date_trunc("HOUR",col("window.start")))
+    df3_1.show()
+//    val df3_2 = df2.withColumn("prev_hour", date_trunc("HOUR", col("since"))).select(col("since"), col("prev_hour"), col("hourly_average_price").as("prev_avg_price"))
+    val df3_2 = df3_1.withColumn("prev_hour", date_trunc("HOUR", col("since"))).select(col("since"), col("prev_hour"))
+    //and at the end join by window start time
+//      .join(dfHourlyWindow, col("prev_hour") === date_trunc("HOUR",col("window.end")))
+//    val df3 = df2.join(df3_1, "since").join(df3_2, "since")
+    val df3_3 = df3_2.join(dfHourlyWindow, col("next_hour") === date_trunc("HOUR",col("window.start")))
+    .withColumn("next_avg_price", col("hourly_average_price"))
+    .join(dfHourlyWindow, col("prev_hour") === date_trunc("HOUR",col("window.end")))
+    .withColumn("prev_avg_price", col("hourly_average_price"))
+    val df3 = df3_3
+    df3.show()
+
+
+    
       
-      
-    //CORRELATION MATRIX
+    //compute correlation matrix
     //    val assembler = new VectorAssembler().setInputCols(Array("transactions_24h", "difficulty", "volume_24h", "mempool_transactions", "mempool_size", "mempool_tps", "mempool_total_fee_usd", "average_transaction_fee_24h", "nodes", "inflation_usd_24h", "average_transaction_fee_usd_24h", "market_price_usd", "next_difficulty_estimate", "suggested_transaction_fee_per_byte_sat")).setOutputCol("features").setHandleInvalid("keep")
     //    val df4 = assembler.transform(df3)
     //
@@ -86,14 +105,14 @@ class BTCTrainerActor extends AbstractTrainerActor(Consts.CS_BTC) {
 
     val assembler = new VectorAssembler().setInputCols(Array("transactions_24h", "difficulty", "mempool_transactions", "average_transaction_fee_24h", "nodes", "inflation_usd_24h", "suggested_transaction_fee_per_byte_sat")).setOutputCol("features")
       .setHandleInvalid("skip")
-    val df4 = assembler.transform(df3).withColumn("label", df3.col("market_price_usd"))
+    val df4 = assembler.transform(df3).withColumn("label", df3.col("market_price_usd")).cache()
+    df4.sort("since").show(false)
+    df4.printSchema()
 
     //definizione training e test set
     val Array(training, test) = df4.randomSplit(Array(0.7, 0.3), 123)
     println("training count:" + training.count())
     println("test count:" + test.count())
-    df4.show(false)
-    df4.printSchema()
 
     //creazione modello
     val GBT = new GBTRegressor()
