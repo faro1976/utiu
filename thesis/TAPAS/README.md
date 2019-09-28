@@ -42,14 +42,17 @@ in order to start:
 ## Case studies
 
 * Bitcoin statistics and prediction
+
 Bitcoin price prediction and general statistics about blockchain and Bitcoin network
 dataset from custom poller of Blockchair site..........
 
 * Activity detection
+
 Activity recognition of older people by wearable sensor (classification, 9 features, 4 classes)
 dataset from https://archive.ics.uci.edu/ml/datasets/Activity+recognition+with+healthy+older+people+using+a+batteryless+wearable+sensor 
 
 * Wine 
+
 Wine cultivars classification based on a chemical analysis (classification, 13 features, 3 classes)  
 dataset from https://archive.ics.uci.edu/ml/datasets/Wine
 
