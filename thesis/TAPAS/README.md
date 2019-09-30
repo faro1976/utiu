@@ -1,8 +1,7 @@
 # TAPAS - Timely Analytics and Predictions Actor System
 
 ## Overview
-A framework to execute machine learning and analytics algorithms supported by actor model and in a (near) real-time way. 
-
+A framework to execute machine learning and analytics tasks supported by actor model and in timely fashion. Based on Akka toolkit and implemented by Scala programming language, it adopts Apache Spark to compute parallel distributed analysis and Apache Kafka to decouple the layers of producer and consumer. 
 
 ## Installation
 * pull-down github repository
@@ -72,6 +71,12 @@ aaaa
 aaaa
 ``` 
 
+## Pipeline
+The solution is composed of the following components:
+* ingestion [producer] component: gets data collection raw data files and send message to relative topic;
+* routing [consumer] compoment: reads data from topic and dispatcth message to the suitable component;
+* ml learning and data analytics [trainer]: executes a ml training phase reading raw data from a distributed file system, builds a ml model and computes advanced analytics;
+* prediction [predictor]: receive a request for data prediction and reply to it applyng a suitable ml model.
 
 ## Abstract implementation
 TODO describe abstraction, classes and roles
