@@ -55,7 +55,7 @@ abstract class AbstractTrainerActor(name: String) extends AbstractBaseActor(name
     context.actorSelection("/user/predictor-" + name /*+"*"*/ ) ! TrainingFinished()
 
     //self-message to start a new training
-    self ! AbstractTrainerActor.TrainingFinished()
+//    self ! AbstractTrainerActor.TrainingFinished()
   }
 
   def doInternalTraining(sc: SparkSession): MLWritable

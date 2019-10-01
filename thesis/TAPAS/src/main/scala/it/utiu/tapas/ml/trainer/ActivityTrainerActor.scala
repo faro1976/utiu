@@ -21,20 +21,20 @@ object ActivityTrainerActor {
 class ActivityTrainerActor extends AbstractTrainerActor(Consts.CS_ACTIVITY) {
 
   override def doInternalTraining(spark: SparkSession): MLWritable = {
-    //caricamento dataset come CSV inferendo lo schema dall'header
-    val df1 = spark.read.format("csv").option("header", "false").option("inferSchema", "true").load(HDFS_CS_PATH+"*").toDF("_1","_2","_3","_4","_5","_6","_7","_8","_9")
+    //load dataset from csv inferring schema from header
+    val df1 = spark.read.format("csv").option("header", "false").option("inferSchema", "true").load(HDFS_CS_PATH + "*").toDF("_1", "_2", "_3", "_4", "_5", "_6", "_7", "_8", "_9")
     df1.show
 
-    //definisco le feature e le aggiungo come colonna "features"
-    val assembler = new VectorAssembler().setInputCols(Array("_1","_2","_3","_4","_5","_6","_7","_8")).setOutputCol("features")
+    //define features
+    val assembler = new VectorAssembler().setInputCols(Array("_1", "_2", "_3", "_4", "_5", "_6", "_7", "_8")).setOutputCol("features")
     val df2 = assembler.transform(df1);
 
-    //generazione casuale del seed per generare dataset train/test differenti ad ogni esecuzione
+    //define training and test sets randomly splitted
     val splitSeed = new Random().nextInt()
     val Array(trainingData, testData) = df2.randomSplit(Array(0.7, 0.3), splitSeed)
     println("training set items: " + trainingData.count() + ", test set items: " + testData.count())
 
-    //LOGISTIC REGRESSION CLASSIFIER
+    //build logistic regression classifier
     val lr = new LogisticRegression()
       .setLabelCol("_9")
       .setFeaturesCol("features")
@@ -43,11 +43,14 @@ class ActivityTrainerActor extends AbstractTrainerActor(Consts.CS_ACTIVITY) {
       .setRegParam(0.3)
       .setElasticNetParam(0.8)
     //      .setFamily("multinomial")
-      
-    val modelLR = lr.fit(df2)
+
+    //learn from training set
+    val modelLR = lr.fit(trainingData)
+    //validate model by test set
     val predictionsLR = modelLR.transform(testData)
     predictionsLR.select("predictedLabel", "_9", "features").show(10)
 
+    //print ml evaluation
     val evaluator = new MulticlassClassificationEvaluator()
       .setLabelCol("_9")
       .setPredictionCol("predictedLabel")
