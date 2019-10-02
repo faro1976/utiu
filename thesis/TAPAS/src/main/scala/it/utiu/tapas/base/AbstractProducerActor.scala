@@ -41,7 +41,7 @@ class AbstractProducerActor(name: String, topic: String) extends AbstractBaseAct
           new ProducerRecord[Array[Byte], String](topic, elem)
         }
         .runWith(Producer.plainSink(producerSettings))
-      //wait before read again
+      //wait x seconds before read again
       Thread.sleep(10000);
     }
   }

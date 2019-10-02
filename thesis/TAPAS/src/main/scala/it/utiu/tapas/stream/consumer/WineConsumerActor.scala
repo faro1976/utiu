@@ -11,6 +11,6 @@ object WineConsumerActor {
   val COLS_NUM = 14
 }
 
-class WineConsumerActor(predictor: ActorRef) extends AbstractConsumerActor(Consts.CS_WINE, Consts.TOPIC_WINE, predictor, WineConsumerActor.header, WineConsumerActor.COLS_NUM) {
-   override def doInternalConsuming() {}
+class WineConsumerActor(predictor: ActorRef) extends AbstractConsumerActor(Consts.CS_WINE, Consts.TOPIC_WINE, predictor, WineConsumerActor.header) {
+ override def isPredictionRequest(row: String) : Boolean = row.split(",").size == (ActivityConsumerActor.COLS_NUM-1)
 }

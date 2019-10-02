@@ -35,7 +35,7 @@ object AbstractConsumerActor {
 }
 
 
-abstract class AbstractConsumerActor(name: String, topic: String, predictor: ActorRef, header: String, colsNum: Int) extends AbstractBaseActor(name) {
+abstract class AbstractConsumerActor(name: String, topic: String, predictor: ActorRef, header: String) extends AbstractBaseActor(name) {
   override def receive: Receive = {
     //start consuming message
     case AbstractConsumerActor.StartConsuming()            => doConsuming()
@@ -47,7 +47,7 @@ abstract class AbstractConsumerActor(name: String, topic: String, predictor: Act
   val buffer = ArrayBuffer[String]()
   
   //internal
-  def doInternalConsuming()
+  def isPredictionRequest(row: String) : Boolean
 
   
   private def doConsuming() {
@@ -65,8 +65,7 @@ abstract class AbstractConsumerActor(name: String, topic: String, predictor: Act
         .mapAsync(1) { msg =>
           val strMsg = msg.value
           //println(s"value: ${strMsg}")
-          val tokens = strMsg.split(",")
-          if (tokens.size == colsNum) {
+          if (!isPredictionRequest(strMsg)) {
             //input for training action
             buffer.append(strMsg)
             if (buffer.size == BUFF_SIZE) {
@@ -88,7 +87,7 @@ abstract class AbstractConsumerActor(name: String, topic: String, predictor: Act
               buffer.clear()
             }
           } else {
-            //one field is missing: input for prediction action
+            //input for prediction action
             println("request prediction for: " + strMsg)
             predictor ! AbstractPredictorActor.AskPrediction(strMsg)
           }

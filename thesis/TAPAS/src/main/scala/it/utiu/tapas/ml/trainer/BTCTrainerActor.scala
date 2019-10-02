@@ -30,6 +30,9 @@ import org.apache.spark.ml.linalg.Vector
 import java.text.SimpleDateFormat
 import org.apache.spark.sql.Dataset
 import org.apache.spark.sql.{ DataFrame, SparkSession }
+import java.nio.file.Files
+import java.nio.file.Paths
+import java.io.File
 
 object BTCTrainerActor {
   def props(): Props =
@@ -46,8 +49,8 @@ class BTCTrainerActor extends AbstractTrainerActor(Consts.CS_BTC) {
     import org.apache.spark.sql.functions._
 
     //load dataset from csv inferring schema
-//    val df1 = spark.read.json(HDFS_CS_PATH + "blockchair/*")
-        val df1 = spark.read.json(HDFS_CS_PATH + "blockchair/small/*")
+    val df1 = spark.read.json(HDFS_CS_PATH + "blockchair/*")
+//        val df1 = spark.read.json(HDFS_CS_PATH + "blockchair/small/*")
     df1.show
     df1.printSchema()
     import spark.implicits._
@@ -80,33 +83,15 @@ class BTCTrainerActor extends AbstractTrainerActor(Consts.CS_BTC) {
     val df3 = df3_3
     df3.show()
 
-    //compute correlation matrix
-    //    val assembler = new VectorAssembler().setInputCols(Array("transactions_24h", "difficulty", "volume_24h", "mempool_transactions", "mempool_size", "mempool_tps", "mempool_total_fee_usd", "average_transaction_fee_24h", "nodes", "inflation_usd_24h", "average_transaction_fee_usd_24h", "market_price_usd", "next_difficulty_estimate", "suggested_transaction_fee_per_byte_sat")).setOutputCol("features").setHandleInvalid("keep")
-    //    val df4 = assembler.transform(df3)
-    //
-    //    //    val Row(coeff1: Matrix) = Correlation.corr(df4, "features").head
-    //    //println("Pearson correlation matrix:\n" + coeff1.toString)
-    //    //
-    //    //val Row(coeff2: Matrix) = Correlation.corr(df4, "features", "spearman").head
-    //    //println("Spearman correlation matrix:\n" + coeff2.toString)
-    //
-    //    val Row(coeff1: Matrix) = Correlation.corr(df4, "features").head
-    //    println(s"Pearson correlation matrix:\n $coeff1")
-    //
-    //    val Row(coeff2: Matrix) = Correlation.corr(df4, "features", "spearman").head
-    //    println(coeff2.toString(Int.MaxValue, Int.MaxValue))
-    //
-    //    for (v <- coeff2.colIter) {
-    //      for (i <- v.toArray) {
-    //        println(i)
-    //      }
-    //    }
-
     //define model features
-    val assembler = new VectorAssembler().setInputCols(Array("transactions_24h", "difficulty", "mempool_transactions", "average_transaction_fee_24h", "nodes", "inflation_usd_24h", "suggested_transaction_fee_per_byte_sat", "prev_avg_price", "next_avg_price")).setOutputCol("features")
+//    val assembler = new VectorAssembler().setInputCols(Array("transactions_24h", "difficulty", "mempool_transactions", "average_transaction_fee_24h", "nodes", "inflation_usd_24h", "suggested_transaction_fee_per_byte_sat", "prev_avg_price", "next_avg_price")).setOutputCol("features")
+    val assembler = new VectorAssembler().setInputCols(Array("transactions_24h", "difficulty", "mempool_transactions", "average_transaction_fee_24h", "nodes", "inflation_usd_24h", "suggested_transaction_fee_per_byte_sat", "prev_avg_price", "market_price_usd")).setOutputCol("features")
       .setHandleInvalid("skip")
     //define model label
-    val df4 = assembler.transform(df3).withColumn("label", df3.col("market_price_usd")).cache()
+//    val df4 = assembler.transform(df3).withColumn("label", df3.col("market_price_usd")).cache()
+      val df4 = assembler.transform(df3).withColumn("label", df3.col("next_avg_price")).cache()
+      
+    df4.show()
     df4.printSchema()
 
     //define training and test sets randomly splitted
@@ -163,7 +148,7 @@ class BTCTrainerActor extends AbstractTrainerActor(Consts.CS_BTC) {
     //last 24h values: transactions_24h, volume_24h, average_transaction_fee_24h, inflation_usd_24h
 
     //add yyyy-MM-dd date
-    val dfAnalyticsPre = df3.withColumn("date_only", date_format(to_date(col("since"), "yyyy-MM-dd HH:mm:ss"), "yyyy-MM-dd"))
+    val dfAnalyticsPre = df4.withColumn("date_only", date_format(to_date(col("since"), "yyyy-MM-dd HH:mm:ss"), "yyyy-MM-dd"))
     dfAnalyticsPre.show()
 //    //TODO ROB valutare se considerare ultima segnalazione giornaliera vs. media last24h  
 //    //instant values, compute average
@@ -181,8 +166,24 @@ class BTCTrainerActor extends AbstractTrainerActor(Consts.CS_BTC) {
     val dfAnalyticsRes = dfAnalyticsPre.groupBy("date_only").agg(mean("difficulty").as("avgDifficulty"), mean("nodes").as("avgNodes"), mean("mempool_transactions").as("avgMempoolTxs"), mean("market_price_usd").as("avgPriceUSD")
         , mean("transactions_24h").as("avgTx24h"), mean("volume_24h").as("avgVolume24h"), mean("average_transaction_fee_24h").as("avgTxFee24h"), mean("inflation_usd_24h").as("avgInflatUSD24h"))
     dfAnalyticsRes.show()
+    if (Files.exists(Paths.get(ANALYTICS_OUTPUT_FILE))) new File(ANALYTICS_OUTPUT_FILE).delete() 
+        
     dfAnalyticsRes.sort("date_only").write.csv(ANALYTICS_OUTPUT_FILE)
 
+        
+    //compute correlation matrix
+    val Row(coeff1: Matrix) = Correlation.corr(df4, "features").head
+    println(s"Pearson correlation matrix:\n $coeff1")
+
+    val Row(coeff2: Matrix) = Correlation.corr(df4, "features", "spearman").head
+    println(coeff2.toString(Int.MaxValue, Int.MaxValue))
+
+    for (v <- coeff2.colIter) {
+      for (i <- v.toArray) {
+        println(i)
+      }
+    }
+    
     return modelGBT
   }
 

@@ -17,6 +17,11 @@ import it.utiu.tapas.stream.consumer.ActivityConsumerActor
 import it.utiu.tapas.stream.consumer.WineConsumerActor
 import it.utiu.tapas.stream.producer.ActivityProducerActor
 import it.utiu.tapas.stream.producer.WineProducerActor
+import it.utiu.tapas.stream.producer.BTCProducerActor
+import it.utiu.tapas.stream.consumer.BTCConsumerActor
+import it.utiu.tapas.ml.predictor.BTCPredictorActor
+import it.utiu.tapas.stream.consumer.AbstractConsumerActor
+import it.utiu.tapas.stream.consumer.AbstractProducerActor
 
 
 object App {
@@ -45,6 +50,9 @@ class App(system: ActorSystem) {
   var activityProducerRef: ActorRef = null
   //bitcoin case study
   var btcTrainerRef: ActorRef = null
+  var btcPredictorRef: ActorRef = null
+  var btcConsumerRef: ActorRef = null
+  var btcProducerRef: ActorRef = null
 
   def run(): Unit = {
     //create wine actors
@@ -58,7 +66,10 @@ class App(system: ActorSystem) {
     activityConsumerRef = system.actorOf(ActivityConsumerActor.props(activityPredictorRef), "consumer-activity")
     activityProducerRef = system.actorOf(ActivityProducerActor.props(), "producer-activity")
     //create bitcoin actors
-    btcTrainerRef = system.actorOf(BTCTrainerActor.props(), "btc-activity")
+    btcTrainerRef = system.actorOf(BTCTrainerActor.props(), "trainer-btc")
+    btcPredictorRef = system.actorOf(BTCPredictorActor.props(), "predictor-btc")
+    btcConsumerRef = system.actorOf(BTCConsumerActor.props(btcPredictorRef), "consumer-btc")
+    btcProducerRef = system.actorOf(BTCProducerActor.props(), "producer-btc")
 
     //start wine actors
     //    wineTrainerRef ! AbstractTrainerActor.StartTraining()
@@ -76,6 +87,10 @@ class App(system: ActorSystem) {
 
     //start bitcoin actors
     btcTrainerRef ! AbstractTrainerActor.StartTraining()
+    Thread.sleep(2000)
+    btcConsumerRef ! AbstractConsumerActor.StartConsuming()
+    Thread.sleep(10000)
+    btcProducerRef ! AbstractProducerActor.StartProducing()
 
     Await.ready(system.whenTerminated, Duration.Inf)
   }
