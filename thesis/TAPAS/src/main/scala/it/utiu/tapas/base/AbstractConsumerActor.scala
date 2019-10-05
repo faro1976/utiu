@@ -25,6 +25,10 @@ import akka.stream.scaladsl.Sink
 import it.utiu.tapas.base.AbstractBaseActor
 import it.utiu.tapas.base.AbstractPredictorActor
 import it.utiu.tapas.stream.consumer.AbstractConsumerActor.BUFF_SIZE
+import java.nio.file.Files
+import java.nio.file.Paths
+import java.nio.file.StandardOpenOption
+import org.apache.hadoop.fs.Path
 
 
 object AbstractConsumerActor {
@@ -40,18 +44,23 @@ abstract class AbstractConsumerActor(name: String, topic: String, predictor: Act
     //start consuming message
     case AbstractConsumerActor.StartConsuming()            => doConsuming()
     //received prediction message
-    case AbstractPredictorActor.TellPrediction(prediction) => println("received prediction: " + prediction)
+    case AbstractPredictorActor.TellPrediction(prediction, input) => 
+      println("received prediction: " + prediction)
+      val txtOut = prediction + "@" + input + "\n"
+      val path = Paths.get(RT_OUTPUT_FILE)
+      if (!Files.exists(path)) Files.createFile(path) 
+      Files.write(path, txtOut.getBytes, StandardOpenOption.APPEND)
   }
 
   //buffered messages to store
   val buffer = ArrayBuffer[String]()
   
   //internal
-  def isPredictionRequest(row: String) : Boolean
-
+  def isPredictionRequest(row: String) : Boolean = false
+  def isAlwaysInput() : Boolean = false
   
   private def doConsuming() {
-
+    log.info("start consuming for "+name+"...")
     implicit val materializer: ActorMaterializer = ActorMaterializer()
     implicit val executionContext: ExecutionContext = context.system.dispatcher
 
@@ -64,12 +73,14 @@ abstract class AbstractConsumerActor(name: String, topic: String, predictor: Act
       Consumer.plainSource(consumerSettings, Subscriptions.topics(topic))
         .mapAsync(1) { msg =>
           val strMsg = msg.value
-          //println(s"value: ${strMsg}")
-          if (!isPredictionRequest(strMsg)) {
+          log.info(s"receviced message value: ${strMsg}")
+          val isPredictionReq = isPredictionRequest(strMsg)
+          if (!isPredictionReq || isAlwaysInput) {
             //input for training action
             buffer.append(strMsg)
             if (buffer.size == BUFF_SIZE) {
-              println("dump " + buffer.size + " input messages to file system...")
+              //dump data to HDFS
+              log.info("dump " + buffer.size + " input messages to HDFS")
               try {
                 val path = new Path(HDFS_CS_PATH + name + ".input." + new Date().getTime)
                 val conf = new Configuration()
@@ -85,10 +96,11 @@ abstract class AbstractConsumerActor(name: String, topic: String, predictor: Act
                 case t: Throwable => println(t)
               }
               buffer.clear()
-            }
-          } else {
+            } else log.info("input messages buffered")
+          }
+          if (isPredictionReq) {
             //input for prediction action
-            println("request prediction for: " + strMsg)
+            log.info("request prediction for: " + strMsg)
             predictor ! AbstractPredictorActor.AskPrediction(strMsg)
           }
           Future.successful(Done)

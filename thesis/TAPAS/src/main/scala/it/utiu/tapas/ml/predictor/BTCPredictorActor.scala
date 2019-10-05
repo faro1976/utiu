@@ -13,40 +13,31 @@ import akka.actor.Props
 import it.utiu.tapas.base.AbstractPredictorActor
 import it.utiu.tapas.util.Consts
 import org.apache.spark.ml.util.MLReader
+import org.apache.spark.ml.regression.GBTRegressionModel
 
 object BTCPredictorActor {
   def props(): Props = Props(new BTCPredictorActor())
 
 }
 
-class BTCPredictorActor() extends AbstractPredictorActor[LogisticRegressionModel](Consts.CS_ACTIVITY) {
+class BTCPredictorActor() extends AbstractPredictorActor[GBTRegressionModel](Consts.CS_BTC) {
 
-  override def doInternalPrediction(msgs: String, spark: SparkSession, model: Model[LogisticRegressionModel]): String = {
-    val lrModel = model.asInstanceOf[LogisticRegressionModel]
+  override def doInternalPrediction(msgs: String, spark: SparkSession, model: Model[GBTRegressionModel]): String = {
+    val modelGBT = model.asInstanceOf[GBTRegressionModel]
 
-    //cast to List[List[Double]]
-    val buffInput = new ListBuffer[List[Double]]()
-    //    msgs.foreach(m=>buffInput.append(m.split(",").map(_.).toList))
-    //    val input :List[List[Double]] =buffInput.toList
-    //    val input = msgs.split(",").map(_.).toList
-    val tokens = msgs.split(",")
-    val input = (tokens(0).toDouble, tokens(1).toDouble, tokens(2).toDouble, tokens(3).toDouble, tokens(4).toDouble, tokens(5).toDouble, tokens(6).toDouble, tokens(7).toDouble)
-
-    import spark.implicits._
-
-    val sentenceData = Seq(input).toDF()
-    val assembler = new VectorAssembler().setInputCols(Array("_1", "_2", "_3", "_4", "_5", "_6", "_7", "_8")).setOutputCol("features")
-    val ds = assembler.transform(sentenceData)
-    ds.show()
-
-    val predictions = lrModel.transform(ds)
-    println("prediction from loaded model...")
+    import spark.implicits._ // spark is your SparkSession object
+    val df1 = spark.read.json(Seq(msgs).toDS)
+    val df2 = df1.select("context.cache.since", "data.transactions_24h", "data.difficulty", "data.volume_24h", "data.mempool_transactions", "data.mempool_size", "data.mempool_tps", "data.mempool_total_fee_usd", "data.average_transaction_fee_24h", "data.nodes", "data.inflation_usd_24h", "data.average_transaction_fee_usd_24h", "data.market_price_usd", "data.next_difficulty_estimate", "data.suggested_transaction_fee_per_byte_sat")
+    val assembler = new VectorAssembler().setInputCols(Array("transactions_24h", "difficulty", "mempool_transactions", "average_transaction_fee_24h", "nodes", "inflation_usd_24h", "suggested_transaction_fee_per_byte_sat", /*"prev_avg_price", */"market_price_usd")).setOutputCol("features")
+      .setHandleInvalid("skip")
+    val df3 = assembler.transform(df2)      
+    
+    val predictions = modelGBT.transform(df3)
     predictions.show()
-    val ret = predictions.select("predictedLabel").collect().map(_(0)).toList
-
+    val ret = predictions.select("prediction").collect().map(_(0)).toList
     return ret.asInstanceOf[List[Double]](0).toString()
   }
 
   
-  override def getAlgo()= LogisticRegressionModel.read
+  override def getAlgo()= GBTRegressionModel.read
 }

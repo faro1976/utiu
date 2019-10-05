@@ -23,7 +23,7 @@ import org.apache.spark.mllib.evaluation.RegressionMetrics
 import org.apache.spark.mllib.regression.LinearRegressionWithSGD
 import org.apache.spark.mllib.evaluation.RegressionMetrics
 import org.apache.spark.mllib.util.MLUtils
-// $example off$
+
 import org.apache.spark.sql.SQLContext
 import org.apache.spark.{ SparkConf, SparkContext }
 import org.apache.spark.ml.linalg.Vector
@@ -33,6 +33,7 @@ import org.apache.spark.sql.{ DataFrame, SparkSession }
 import java.nio.file.Files
 import java.nio.file.Paths
 import java.io.File
+import org.apache.spark.ml.Transformer
 
 object BTCTrainerActor {
   def props(): Props =
@@ -45,12 +46,12 @@ class BTCTrainerActor extends AbstractTrainerActor(Consts.CS_BTC) {
       select("window.start", "window.end", s"$aggCol").
       show(truncate = false)
   }
-  override def doInternalTraining(spark: SparkSession): MLWritable = {
+  override def doInternalTraining(spark: SparkSession): Transformer = {
     import org.apache.spark.sql.functions._
 
     //load dataset from csv inferring schema
-    val df1 = spark.read.json(HDFS_CS_PATH + "blockchair/*")
-//        val df1 = spark.read.json(HDFS_CS_PATH + "blockchair/small/*")
+//    val df1 = spark.read.json(HDFS_CS_PATH + "blockchair/*")
+        val df1 = spark.read.json(HDFS_CS_PATH + "blockchair/small/*")
     df1.show
     df1.printSchema()
     import spark.implicits._
@@ -85,7 +86,7 @@ class BTCTrainerActor extends AbstractTrainerActor(Consts.CS_BTC) {
 
     //define model features
 //    val assembler = new VectorAssembler().setInputCols(Array("transactions_24h", "difficulty", "mempool_transactions", "average_transaction_fee_24h", "nodes", "inflation_usd_24h", "suggested_transaction_fee_per_byte_sat", "prev_avg_price", "next_avg_price")).setOutputCol("features")
-    val assembler = new VectorAssembler().setInputCols(Array("transactions_24h", "difficulty", "mempool_transactions", "average_transaction_fee_24h", "nodes", "inflation_usd_24h", "suggested_transaction_fee_per_byte_sat", "prev_avg_price", "market_price_usd")).setOutputCol("features")
+    val assembler = new VectorAssembler().setInputCols(Array("transactions_24h", "difficulty", "mempool_transactions", "average_transaction_fee_24h", "nodes", "inflation_usd_24h", "suggested_transaction_fee_per_byte_sat", /*"prev_avg_price", */"market_price_usd")).setOutputCol("features")
       .setHandleInvalid("skip")
     //define model label
 //    val df4 = assembler.transform(df3).withColumn("label", df3.col("market_price_usd")).cache()
@@ -142,47 +143,7 @@ class BTCTrainerActor extends AbstractTrainerActor(Consts.CS_BTC) {
     evaluator.setMetricName("mae")
     val mae = evaluator.evaluate(predictions)
     println(s"Mean absolute error: $mae")
-
-    //do analytics
-    //instant values: difficulty, nodes, mempool_transactions, market_price_usd
-    //last 24h values: transactions_24h, volume_24h, average_transaction_fee_24h, inflation_usd_24h
-
-    //add yyyy-MM-dd date
-    val dfAnalyticsPre = df4.withColumn("date_only", date_format(to_date(col("since"), "yyyy-MM-dd HH:mm:ss"), "yyyy-MM-dd"))
-    dfAnalyticsPre.show()
-//    //TODO ROB valutare se considerare ultima segnalazione giornaliera vs. media last24h  
-//    //instant values, compute average
-//    val dfInst = dfAnalyticsPre.groupBy("date_only").agg(mean("difficulty").as("avgDifficulty"), mean("nodes").as("avgNodes"), mean("mempool_transactions").as("avgMempoolTxs"), mean("market_price_usd").as("avgPriceUSD"))
-//    //last 24hh values, get the later value of day
-//    val dfKeysLast24 = dfAnalyticsPre.groupBy("date_only").agg(max("since").as("since"))
-//    dfKeysLast24.show()
-//    //extract last24hh values by key of later in day value
-//    val dfLast24 = dfAnalyticsPre.join(dfKeysLast24, "since")
-//    dfLast24.show()
-//    //join average and later in day values
-//    val dfJoineddfAnalytics = dfInst.join(dfLast24, "date_only")
     
-    //instant and last24h values, compute average
-    val dfAnalyticsRes = dfAnalyticsPre.groupBy("date_only").agg(mean("difficulty").as("avgDifficulty"), mean("nodes").as("avgNodes"), mean("mempool_transactions").as("avgMempoolTxs"), mean("market_price_usd").as("avgPriceUSD")
-        , mean("transactions_24h").as("avgTx24h"), mean("volume_24h").as("avgVolume24h"), mean("average_transaction_fee_24h").as("avgTxFee24h"), mean("inflation_usd_24h").as("avgInflatUSD24h"))
-    dfAnalyticsRes.show()
-    if (Files.exists(Paths.get(ANALYTICS_OUTPUT_FILE))) new File(ANALYTICS_OUTPUT_FILE).delete() 
-        
-    dfAnalyticsRes.sort("date_only").write.csv(ANALYTICS_OUTPUT_FILE)
-
-        
-    //compute correlation matrix
-    val Row(coeff1: Matrix) = Correlation.corr(df4, "features").head
-    println(s"Pearson correlation matrix:\n $coeff1")
-
-    val Row(coeff2: Matrix) = Correlation.corr(df4, "features", "spearman").head
-    println(coeff2.toString(Int.MaxValue, Int.MaxValue))
-
-    for (v <- coeff2.colIter) {
-      for (i <- v.toArray) {
-        println(i)
-      }
-    }
     
     return modelGBT
   }

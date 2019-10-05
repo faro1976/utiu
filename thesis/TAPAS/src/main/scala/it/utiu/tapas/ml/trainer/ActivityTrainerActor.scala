@@ -12,6 +12,7 @@ import akka.actor.Props
 import it.utiu.tapas.base.AbstractBaseActor
 import it.utiu.tapas.base.AbstractTrainerActor
 import it.utiu.tapas.util.Consts
+import org.apache.spark.ml.Transformer
 
 object ActivityTrainerActor {
   def props(): Props =
@@ -20,7 +21,7 @@ object ActivityTrainerActor {
 
 class ActivityTrainerActor extends AbstractTrainerActor(Consts.CS_ACTIVITY) {
 
-  override def doInternalTraining(spark: SparkSession): MLWritable = {
+  override def doInternalTraining(spark: SparkSession): Transformer = {
     //load dataset from csv inferring schema from header
     val df1 = spark.read.format("csv").option("header", "false").option("inferSchema", "true").load(HDFS_CS_PATH + "*").toDF("_1", "_2", "_3", "_4", "_5", "_6", "_7", "_8", "_9")
     df1.show
@@ -38,7 +39,7 @@ class ActivityTrainerActor extends AbstractTrainerActor(Consts.CS_ACTIVITY) {
     val lr = new LogisticRegression()
       .setLabelCol("_9")
       .setFeaturesCol("features")
-      .setPredictionCol("predictedLabel")
+      .setPredictionCol("prediction")
       .setMaxIter(10)
       .setRegParam(0.3)
       .setElasticNetParam(0.8)
@@ -48,12 +49,12 @@ class ActivityTrainerActor extends AbstractTrainerActor(Consts.CS_ACTIVITY) {
     val modelLR = lr.fit(trainingData)
     //validate model by test set
     val predictionsLR = modelLR.transform(testData)
-    predictionsLR.select("predictedLabel", "_9", "features").show(10)
+    predictionsLR.select("prediction", "_9", "features").show(10)
 
     //print ml evaluation
     val evaluator = new MulticlassClassificationEvaluator()
       .setLabelCol("_9")
-      .setPredictionCol("predictedLabel")
+      .setPredictionCol("prediction")
       .setMetricName("accuracy")
     val accuracy = evaluator.evaluate(predictionsLR)
     println("accuracy: " + accuracy)

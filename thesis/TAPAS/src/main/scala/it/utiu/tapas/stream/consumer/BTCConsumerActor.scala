@@ -30,5 +30,6 @@ object BTCConsumerActor {
 }
 
   class BTCConsumerActor(predictor: ActorRef) extends AbstractConsumerActor(Consts.CS_BTC, Consts.TOPIC_BTC, predictor, BTCConsumerActor.header) {
-     override def isPredictionRequest(row: String) : Boolean = JSON.parseFull(row).contains("market_price_usd")      
+     override def isPredictionRequest(row: String) : Boolean = true
+     override def isAlwaysInput() : Boolean = true
 }

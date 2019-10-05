@@ -20,6 +20,8 @@ abstract class AbstractBaseActor(name: String) extends Actor with ActorLogging {
   //  val ML_MODEL_FILE = HDFS_URL+"ml-model/"+name+"/"
   val ML_MODEL_FILE = "./ml-model/" + name + "/"
   val ML_MODEL_FILE_COPY = "./ml-model/" + name + "_copy/"
-  val RT_INPUT_FILE = "./input/" + name + ".input"
+  val RT_PATH = "./rt/" + name + "/"
+  val RT_INPUT_PATH = RT_PATH + "input/"
+  val RT_OUTPUT_FILE = RT_PATH + "output/" + name + ".out"
   val ANALYTICS_OUTPUT_FILE = "./analytics/" + name + ".csv"
 }

@@ -42,7 +42,7 @@ class ActivityPredictorActor() extends AbstractPredictorActor[LogisticRegression
     val predictions = lrModel.transform(ds)
     println("prediction from loaded model...")
     predictions.show()
-    val ret = predictions.select("predictedLabel").collect().map(_(0)).toList
+    val ret = predictions.select("prediction").collect().map(_(0)).toList
 
     return ret.asInstanceOf[List[Double]](0).toString()
   }

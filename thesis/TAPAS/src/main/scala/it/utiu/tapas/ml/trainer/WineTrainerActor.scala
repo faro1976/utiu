@@ -12,6 +12,7 @@ import akka.actor.Props
 import it.utiu.tapas.base.AbstractBaseActor
 import it.utiu.tapas.base.AbstractTrainerActor
 import it.utiu.tapas.util.Consts
+import org.apache.spark.ml.Transformer
 
 object WineTrainerActor {
   def props(): Props =
@@ -20,7 +21,7 @@ object WineTrainerActor {
 
 class WineTrainerActor extends AbstractTrainerActor(Consts.CS_WINE) {
 
-  override def doInternalTraining(spark: SparkSession): MLWritable = {
+  override def doInternalTraining(spark: SparkSession): Transformer = {
 
     
     //caricamento dataset come CSV inferendo lo schema dall'header

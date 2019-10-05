@@ -5,30 +5,35 @@ import org.apache.spark.ml.util.MLWritable
 import org.apache.spark.sql.SparkSession
 import it.utiu.tapas.base.AbstractTrainerActor.StartTraining
 import it.utiu.tapas.base.AbstractTrainerActor.TrainingFinished
+import org.apache.spark.ml.Model
+import org.apache.spark.ml.Transformer
 
 
 object AbstractTrainerActor {
   //start training message
   case class StartTraining()
   //finished training message  
-  case class TrainingFinished()
+  case class TrainingFinished(model: Transformer)
 }
 
 
-abstract class AbstractTrainerActor(name: String) extends AbstractBaseActor(name) {
+abstract class AbstractTrainerActor[T <: Model[T]](name: String) extends AbstractBaseActor(name) {
   override def receive: Receive = {
 
     case StartTraining() =>
       doTraining()
 
-    case TrainingFinished() =>
+    case TrainingFinished(model: Model[T]) =>
       println("training restart waiting...")
-      Thread.sleep(30000)
+      Thread.sleep(60000)
       println("restart training")
       doTraining()
   }
-
+  
+  def doInternalTraining(sc: SparkSession): Transformer
+  
   private def doTraining() {
+    log.info("start training for "+name+"...")
     //start Spark session
     val conf = new SparkConf()
       .setAppName(name + "-training")
@@ -44,7 +49,7 @@ abstract class AbstractTrainerActor(name: String) extends AbstractBaseActor(name
     
     //save ml model
     println("saving ml model into " + ML_MODEL_FILE + "...")
-    ml.write.overwrite().save(ML_MODEL_FILE)
+    ml.asInstanceOf[MLWritable].write.overwrite().save(ML_MODEL_FILE)
     println("saved ml model into " + ML_MODEL_FILE + "...")
 
     //terminate context
@@ -52,11 +57,11 @@ abstract class AbstractTrainerActor(name: String) extends AbstractBaseActor(name
     //spark.stop()
 
     //notify predictor forcing model refresh
-    context.actorSelection("/user/predictor-" + name /*+"*"*/ ) ! TrainingFinished()
+    context.actorSelection("/user/predictor-" + name /*+"*"*/ ) ! TrainingFinished(ml)
 
     //self-message to start a new training
-//    self ! AbstractTrainerActor.TrainingFinished()
+    self ! AbstractTrainerActor.TrainingFinished(ml)
   }
 
-  def doInternalTraining(sc: SparkSession): MLWritable
+  
 }

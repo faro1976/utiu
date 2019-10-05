@@ -22,21 +22,24 @@ import it.utiu.tapas.stream.consumer.BTCConsumerActor
 import it.utiu.tapas.ml.predictor.BTCPredictorActor
 import it.utiu.tapas.stream.consumer.AbstractConsumerActor
 import it.utiu.tapas.stream.consumer.AbstractProducerActor
+import it.utiu.tapas.ml.analyzer.BTCAnalyzerActor
+import it.utiu.tapas.base.AbstractAnalyzerActor
+import it.utiu.tapas.ml.analyzer.BTCAnalyzerActor
 
 
-object App {
+object Runner {
 
   def main(args: Array[String]) {
     //create akka system
     val system = ActorSystem("tapas")
     println("starting TAPAS at " + new Date() + "...")
-    val app = new App(system)
+    val app = new Runner(system)
     app.run()
   }
 
 }
 
-class App(system: ActorSystem) {
+class Runner(system: ActorSystem) {
   //define actors
   //wine case study
   var wineTrainerRef: ActorRef = null
@@ -53,6 +56,7 @@ class App(system: ActorSystem) {
   var btcPredictorRef: ActorRef = null
   var btcConsumerRef: ActorRef = null
   var btcProducerRef: ActorRef = null
+  var btcAnalyzerRef: ActorRef = null
 
   def run(): Unit = {
     //create wine actors
@@ -70,6 +74,7 @@ class App(system: ActorSystem) {
     btcPredictorRef = system.actorOf(BTCPredictorActor.props(), "predictor-btc")
     btcConsumerRef = system.actorOf(BTCConsumerActor.props(btcPredictorRef), "consumer-btc")
     btcProducerRef = system.actorOf(BTCProducerActor.props(), "producer-btc")
+    btcAnalyzerRef = system.actorOf(BTCAnalyzerActor.props(), "analyzer-btc")
 
     //start wine actors
     //    wineTrainerRef ! AbstractTrainerActor.StartTraining()
@@ -86,12 +91,14 @@ class App(system: ActorSystem) {
     //    activityProducerRef ! AbstractProducerActor.StartProducing()
 
     //start bitcoin actors
-    btcTrainerRef ! AbstractTrainerActor.StartTraining()
+//    btcTrainerRef ! AbstractTrainerActor.StartTraining()
     Thread.sleep(2000)
     btcConsumerRef ! AbstractConsumerActor.StartConsuming()
     Thread.sleep(10000)
     btcProducerRef ! AbstractProducerActor.StartProducing()
-
+    Thread.sleep(10000)
+    btcAnalyzerRef ! AbstractAnalyzerActor.StartAnalysis()
+    
     Await.ready(system.whenTerminated, Duration.Inf)
   }
 }
