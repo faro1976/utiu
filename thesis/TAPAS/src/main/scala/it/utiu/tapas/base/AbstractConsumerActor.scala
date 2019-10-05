@@ -45,8 +45,8 @@ abstract class AbstractConsumerActor(name: String, topic: String, predictor: Act
     case AbstractConsumerActor.StartConsuming()            => doConsuming()
     //received prediction message
     case AbstractPredictorActor.TellPrediction(prediction, input) => 
-      println("received prediction: " + prediction)
-      val txtOut = prediction + "@" + input + "\n"
+      log.info("received prediction: " + prediction)
+      val txtOut = new Date() + "@" + prediction + "@" + input + "\n"
       val path = Paths.get(RT_OUTPUT_FILE)
       if (!Files.exists(path)) Files.createFile(path) 
       Files.write(path, txtOut.getBytes, StandardOpenOption.APPEND)
@@ -82,7 +82,7 @@ abstract class AbstractConsumerActor(name: String, topic: String, predictor: Act
               //dump data to HDFS
               log.info("dump " + buffer.size + " input messages to HDFS")
               try {
-                val path = new Path(HDFS_CS_PATH + name + ".input." + new Date().getTime)
+                val path = new Path(HDFS_CS_INPUT_PATH + name + ".input." + new Date().getTime)
                 val conf = new Configuration()
                 val fs = FileSystem.get(new URI(AbstractBaseActor.HDFS_URL), conf);
                 val out = fs.create(path)
@@ -93,7 +93,7 @@ abstract class AbstractConsumerActor(name: String, topic: String, predictor: Act
                 out.close()
 
               } catch {
-                case t: Throwable => println(t)
+                case t: Throwable => log.info(t.toString)
               }
               buffer.clear()
             } else log.info("input messages buffered")

@@ -17,6 +17,8 @@ import scala.collection.mutable.ArrayBuffer
 import org.apache.spark.sql.Row
 import scala.collection.JavaConverters._
 import akka.actor.Props
+import org.apache.spark.ml.stat.Correlation
+import org.apache.spark.ml.linalg.Matrix
 
 object BTCAnalyzerActor {
   def props(): Props = Props(new BTCAnalyzerActor())
@@ -26,7 +28,9 @@ object BTCAnalyzerActor {
 class BTCAnalyzerActor extends AbstractAnalyzerActor(Consts.CS_BTC) {
   override def doInternalAnalysis(spark: SparkSession): (Array[String], scala.collection.immutable.List[Row]) = {
         
-        val df1 = spark.read.json(HDFS_CS_PATH + "blockchair/small/*")
+    val df1 = spark.read.json(HDFS_CS_PATH + "*")
+//    val df1 = spark.read.json(HDFS_CS_PATH + "blockchair/*")    
+//        val df1 = spark.read.json(HDFS_CS_PATH + "blockchair/small/*")
     df1.show
     df1.printSchema()
     import spark.implicits._
@@ -57,25 +61,28 @@ class BTCAnalyzerActor extends AbstractAnalyzerActor(Consts.CS_BTC) {
     val dfAnalyticsRes = dfAnalyticsPre.groupBy("date_only").agg(mean("difficulty").as("avgDifficulty"), mean("nodes").as("avgNodes"), mean("mempool_transactions").as("avgMempoolTxs"), mean("market_price_usd").as("avgPriceUSD")
         , mean("transactions_24h").as("avgTx24h"), mean("volume_24h").as("avgVolume24h"), mean("average_transaction_fee_24h").as("avgTxFee24h"), mean("inflation_usd_24h").as("avgInflatUSD24h"))
     dfAnalyticsRes.show()
-//    if (Files.exists(Paths.get(ANALYTICS_OUTPUT_FILE))) new File(ANALYTICS_OUTPUT_FILE).delete() 
-
-    
-//    dfAnalyticsRes.sort("date_only").write.csv(ANALYTICS_OUTPUT_FILE)
-    import scala.jdk.CollectionConverters._
-    val ret = dfAnalyticsRes.sort("date_only").cache
-    (ret.columns, ret.collectAsList().asScala.toList)
-        
+ 
 //    //compute correlation matrix
-//    val Row(coeff1: Matrix) = Correlation.corr(df4, "features").head
-//    println(s"Pearson correlation matrix:\n $coeff1")
-//
-//    val Row(coeff2: Matrix) = Correlation.corr(df4, "features", "spearman").head
-//    println(coeff2.toString(Int.MaxValue, Int.MaxValue))
-//
-//    for (v <- coeff2.colIter) {
-//      for (i <- v.toArray) {
-//        println(i)
-//      }
-//    }    
-  }  
+//    computeCorrelationMatrix(df2)
+    
+    val ret = dfAnalyticsRes.sort("date_only").cache
+    (ret.columns, ret.collectAsList().asScala.toList)        
+  }
+
+  
+  private def computeCorrelationMatrix(df: DataFrame) {
+    //compute correlation matrix
+    val Row(coeff1: Matrix) = Correlation.corr(df, "features").head
+    println(s"Pearson correlation matrix:\n $coeff1")
+
+    val Row(coeff2: Matrix) = Correlation.corr(df, "features", "spearman").head
+    println(coeff2.toString(Int.MaxValue, Int.MaxValue))
+
+    for (v <- coeff2.colIter) {
+      for (i <- v.toArray) {
+        println(i)
+      }
+    }        
+  }
+  
 }

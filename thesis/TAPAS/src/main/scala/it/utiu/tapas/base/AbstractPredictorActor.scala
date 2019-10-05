@@ -31,22 +31,13 @@ abstract class AbstractPredictorActor[T <: Model[T]](name: String) extends Abstr
     case AbstractTrainerActor.TrainingFinished(model: Transformer) =>
       mlModel = model.asInstanceOf[Model[T]];
 //      println("loaded model " + ML_MODEL_FILE_COPY)
-      log.info("reloaded model " + mlModel)
+      log.info("reloaded model " + mlModel + " just built")
   }
 
   
   def doInternalPrediction(msgs: String, spark: SparkSession, model: Model[T]): String
   def getAlgo(): MLReader[T]
 
-  private def loadModelFromDisk() : Transformer = {
-      log.info("loading model " + ML_MODEL_FILE_COPY + " from disk...")
-      //delete old copy-of-model
-      FileUtils.deleteDirectory(new File(ML_MODEL_FILE_COPY))
-      //create a fresh copy-of-model
-      FileUtils.copyDirectory(new File(ML_MODEL_FILE), new File(ML_MODEL_FILE_COPY), true);
-      //load copy-of-model
-      getAlgo().load(ML_MODEL_FILE_COPY)    
-  }
   private def doPrediction(msgs: String): String = {
     log.info("prediction requested")
     //start Spark session
@@ -70,4 +61,15 @@ abstract class AbstractPredictorActor[T <: Model[T]](name: String) extends Abstr
 
     return prediction
   }
+  
+  
+  private def loadModelFromDisk() : Transformer = {
+      log.info("restoring model " + ML_MODEL_FILE_COPY + " from disk...")
+      //delete old copy-of-model
+      FileUtils.deleteDirectory(new File(ML_MODEL_FILE_COPY))
+      //create a fresh copy-of-model
+      FileUtils.copyDirectory(new File(ML_MODEL_FILE), new File(ML_MODEL_FILE_COPY), true);
+      //load copy-of-model
+      getAlgo().load(ML_MODEL_FILE_COPY)    
+  }  
 }

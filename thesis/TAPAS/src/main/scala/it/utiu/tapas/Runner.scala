@@ -10,22 +10,23 @@ import akka.actor.ActorSystem
 import it.utiu.anavis.ActivityTrainerActor
 import it.utiu.anavis.BTCTrainerActor
 import it.utiu.anavis.WineTrainerActor
+import it.utiu.tapas.base.AbstractAnalyzerActor
 import it.utiu.tapas.base.AbstractTrainerActor
+import it.utiu.tapas.ml.analyzer.BTCAnalyzerActor
 import it.utiu.tapas.ml.predictor.ActivityPredictorActor
-import it.utiu.tapas.ml.predictor.WinePredictorActor
-import it.utiu.tapas.stream.consumer.ActivityConsumerActor
-import it.utiu.tapas.stream.consumer.WineConsumerActor
-import it.utiu.tapas.stream.producer.ActivityProducerActor
-import it.utiu.tapas.stream.producer.WineProducerActor
-import it.utiu.tapas.stream.producer.BTCProducerActor
-import it.utiu.tapas.stream.consumer.BTCConsumerActor
 import it.utiu.tapas.ml.predictor.BTCPredictorActor
+import it.utiu.tapas.ml.predictor.WinePredictorActor
 import it.utiu.tapas.stream.consumer.AbstractConsumerActor
 import it.utiu.tapas.stream.consumer.AbstractProducerActor
-import it.utiu.tapas.ml.analyzer.BTCAnalyzerActor
-import it.utiu.tapas.base.AbstractAnalyzerActor
-import it.utiu.tapas.ml.analyzer.BTCAnalyzerActor
-
+import it.utiu.tapas.stream.consumer.ActivityConsumerActor
+import it.utiu.tapas.stream.consumer.BTCConsumerActor
+import it.utiu.tapas.stream.consumer.WineConsumerActor
+import it.utiu.tapas.stream.producer.ActivityProducerActor
+import it.utiu.tapas.stream.producer.BTCProducerActor
+import it.utiu.tapas.stream.producer.WineProducerActor
+import it.utiu.tapas.util.Consts.CS_ACTIVITY
+import it.utiu.tapas.util.Consts.CS_BTC
+import it.utiu.tapas.util.Consts.CS_WINE
 
 object Runner {
 
@@ -33,72 +34,53 @@ object Runner {
     //create akka system
     val system = ActorSystem("tapas")
     println("starting TAPAS at " + new Date() + "...")
-    val app = new Runner(system)
-    app.run()
+    val cs = if (args.size > 0) args(0) else CS_BTC
+    val app = new Runner(system, cs)
+    app.run(cs)
   }
 
 }
 
-class Runner(system: ActorSystem) {
+class Runner(system: ActorSystem, cs: String) {
   //define actors
-  //wine case study
-  var wineTrainerRef: ActorRef = null
-  var winePredictorRef: ActorRef = null
-  var wineConsumerRef: ActorRef = null
-  var wineProducerRef: ActorRef = null
-  //activity case study
-  var activityTrainerRef: ActorRef = null
-  var activityPredictorRef: ActorRef = null
-  var activityConsumerRef: ActorRef = null
-  var activityProducerRef: ActorRef = null
-  //bitcoin case study
-  var btcTrainerRef: ActorRef = null
-  var btcPredictorRef: ActorRef = null
-  var btcConsumerRef: ActorRef = null
-  var btcProducerRef: ActorRef = null
-  var btcAnalyzerRef: ActorRef = null
+  var trainerRef: ActorRef = null
+  var predictorRef: ActorRef = null
+  var consumerRef: ActorRef = null
+  var producerRef: ActorRef = null
+  var analyzerRef: ActorRef = null
 
-  def run(): Unit = {
-    //create wine actors
-    wineTrainerRef = system.actorOf(WineTrainerActor.props(), "trainer-wine")
-    winePredictorRef = system.actorOf(WinePredictorActor.props(), "predictor-wine")
-    wineConsumerRef = system.actorOf(WineConsumerActor.props(winePredictorRef), "consumer-wine")
-    wineProducerRef = system.actorOf(WineProducerActor.props(), "producer-wine")
-    //create activity actors
-    activityTrainerRef = system.actorOf(ActivityTrainerActor.props(), "trainer-activity")
-    activityPredictorRef = system.actorOf(ActivityPredictorActor.props(), "predictor-activity")
-    activityConsumerRef = system.actorOf(ActivityConsumerActor.props(activityPredictorRef), "consumer-activity")
-    activityProducerRef = system.actorOf(ActivityProducerActor.props(), "producer-activity")
-    //create bitcoin actors
-    btcTrainerRef = system.actorOf(BTCTrainerActor.props(), "trainer-btc")
-    btcPredictorRef = system.actorOf(BTCPredictorActor.props(), "predictor-btc")
-    btcConsumerRef = system.actorOf(BTCConsumerActor.props(btcPredictorRef), "consumer-btc")
-    btcProducerRef = system.actorOf(BTCProducerActor.props(), "producer-btc")
-    btcAnalyzerRef = system.actorOf(BTCAnalyzerActor.props(), "analyzer-btc")
+  def run(cs: String): Unit = {
+    //create actors
+    cs match {
+      case CS_ACTIVITY =>
+        //create activity actors
+        trainerRef = system.actorOf(ActivityTrainerActor.props(), "trainer-activity")
+        predictorRef = system.actorOf(ActivityPredictorActor.props(), "predictor-activity")
+        consumerRef = system.actorOf(ActivityConsumerActor.props(predictorRef), "consumer-activity")
+        producerRef = system.actorOf(ActivityProducerActor.props(), "producer-activity")
+      case CS_BTC =>
+        trainerRef = system.actorOf(BTCTrainerActor.props(), "trainer-btc")
+        predictorRef = system.actorOf(BTCPredictorActor.props(), "predictor-btc")
+        consumerRef = system.actorOf(BTCConsumerActor.props(predictorRef), "consumer-btc")
+        producerRef = system.actorOf(BTCProducerActor.props(), "producer-btc")
+        analyzerRef = system.actorOf(BTCAnalyzerActor.props(), "analyzer-btc")
+      case CS_WINE =>
+        //create wine actors
+        trainerRef = system.actorOf(WineTrainerActor.props(), "trainer-wine")
+        predictorRef = system.actorOf(WinePredictorActor.props(), "predictor-wine")
+        consumerRef = system.actorOf(WineConsumerActor.props(predictorRef), "consumer-wine")
+        producerRef = system.actorOf(WineProducerActor.props(), "producer-wine")
+      case _ => throw new RuntimeException(cs + " case study code not supported!")
+    }
 
-    //start wine actors
-    //    wineTrainerRef ! AbstractTrainerActor.StartTraining()
-    //    Thread.sleep(2000)
-    //    wineConsumerRef ! AbstractConsumerActor.StartConsuming()
-    //    Thread.sleep(10000)
-    //    wineProducerRef ! AbstractProducerActor.StartProducing()
-
-    //start activity actors
-    //    activityTrainerRef ! AbstractTrainerActor.StartTraining()
-    //    Thread.sleep(2000)
-    //    activityConsumerRef ! AbstractConsumerActor.StartConsuming()
-    //    Thread.sleep(10000)
-    //    activityProducerRef ! AbstractProducerActor.StartProducing()
-
-    //start bitcoin actors
-//    btcTrainerRef ! AbstractTrainerActor.StartTraining()
+    //start actors
+    trainerRef ! AbstractTrainerActor.StartTraining()
     Thread.sleep(2000)
-    btcConsumerRef ! AbstractConsumerActor.StartConsuming()
+    consumerRef ! AbstractConsumerActor.StartConsuming()
     Thread.sleep(10000)
-    btcProducerRef ! AbstractProducerActor.StartProducing()
-    Thread.sleep(10000)
-    btcAnalyzerRef ! AbstractAnalyzerActor.StartAnalysis()
-    
+    producerRef ! AbstractProducerActor.StartProducing()
+    if (analyzerRef != null) analyzerRef ! AbstractAnalyzerActor.StartAnalysis()
+
     Await.ready(system.whenTerminated, Duration.Inf)
   }
 }

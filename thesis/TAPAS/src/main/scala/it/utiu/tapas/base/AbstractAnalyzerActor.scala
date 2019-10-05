@@ -21,9 +21,9 @@ abstract class AbstractAnalyzerActor(name: String) extends AbstractBaseActor(nam
 
     case StartAnalysis() => doAnalysis()
     case AnalysisFinished() =>
-      println("analysis restart waiting...")
+      log.info("analysis restart waiting...")
       Thread.sleep(60000)
-      println("restart analysis")
+      log.info("restart analysis")
       doAnalysis()
   }
 
@@ -52,7 +52,7 @@ abstract class AbstractAnalyzerActor(name: String) extends AbstractBaseActor(nam
     stats._2.foreach(row=>
       buff.append(row.toSeq.mkString(",")+"\n")
     )
-    println(buff)
+    log.info("stats computed:\n"+buff)
     Files.write(Paths.get(ANALYTICS_OUTPUT_FILE), buff.toString.getBytes, StandardOpenOption.CREATE)
 
     

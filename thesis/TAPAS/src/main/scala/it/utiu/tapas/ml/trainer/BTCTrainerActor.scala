@@ -34,6 +34,8 @@ import java.nio.file.Files
 import java.nio.file.Paths
 import java.io.File
 import org.apache.spark.ml.Transformer
+import akka.actor.ActorLogging
+import akka.event.LoggingAdapter
 
 object BTCTrainerActor {
   def props(): Props =
@@ -50,8 +52,9 @@ class BTCTrainerActor extends AbstractTrainerActor(Consts.CS_BTC) {
     import org.apache.spark.sql.functions._
 
     //load dataset from csv inferring schema
+    val df1 = spark.read.json(HDFS_CS_PATH + "*")
 //    val df1 = spark.read.json(HDFS_CS_PATH + "blockchair/*")
-        val df1 = spark.read.json(HDFS_CS_PATH + "blockchair/small/*")
+//        val df1 = spark.read.json(HDFS_CS_PATH + "blockchair/small/*")
     df1.show
     df1.printSchema()
     import spark.implicits._
@@ -147,5 +150,4 @@ class BTCTrainerActor extends AbstractTrainerActor(Consts.CS_BTC) {
     
     return modelGBT
   }
-
 }

@@ -16,12 +16,13 @@ object AbstractBaseActor {
 abstract class AbstractBaseActor(name: String) extends Actor with ActorLogging {
   //dynamic application params
   val HDFS_CS_PATH = HDFS_URL + "/" + name + "/"
+  val HDFS_CS_INPUT_PATH = HDFS_CS_PATH + "input/"
   //TODO ROB spostare modello su HDFS?? problemi con overwrite??
   //  val ML_MODEL_FILE = HDFS_URL+"ml-model/"+name+"/"
   val ML_MODEL_FILE = "./ml-model/" + name + "/"
   val ML_MODEL_FILE_COPY = "./ml-model/" + name + "_copy/"
   val RT_PATH = "./rt/" + name + "/"
   val RT_INPUT_PATH = RT_PATH + "input/"
-  val RT_OUTPUT_FILE = RT_PATH + "output/" + name + ".out"
-  val ANALYTICS_OUTPUT_FILE = "./analytics/" + name + ".csv"
+  val RT_OUTPUT_FILE = RT_PATH + "output/" + name + ".prediction"
+  val ANALYTICS_OUTPUT_FILE = "./analytics/" + name + "-stats.csv"
 }

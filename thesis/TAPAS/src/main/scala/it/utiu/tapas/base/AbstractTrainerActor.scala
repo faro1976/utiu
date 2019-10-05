@@ -24,9 +24,9 @@ abstract class AbstractTrainerActor[T <: Model[T]](name: String) extends Abstrac
       doTraining()
 
     case TrainingFinished(model: Model[T]) =>
-      println("training restart waiting...")
+      log.info("training restart waiting...")
       Thread.sleep(60000)
-      println("restart training")
+      log.info("restart training")
       doTraining()
   }
   
@@ -48,9 +48,9 @@ abstract class AbstractTrainerActor[T <: Model[T]](name: String) extends Abstrac
     val ml = doInternalTraining(spark)
     
     //save ml model
-    println("saving ml model into " + ML_MODEL_FILE + "...")
+    log.info("saving ml model into " + ML_MODEL_FILE + "...")
     ml.asInstanceOf[MLWritable].write.overwrite().save(ML_MODEL_FILE)
-    println("saved ml model into " + ML_MODEL_FILE + "...")
+    log.info("saved ml model into " + ML_MODEL_FILE + "...")
 
     //terminate context
     //TODO ROB lasciare aperto così lo reucpero al prossimo giro??

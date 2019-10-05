@@ -2,4 +2,7 @@
 
 .cache-main
 
-ml-model
+/analytics/
+/ml-model/
+/rt/
+
