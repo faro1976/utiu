@@ -62,8 +62,8 @@ class BTCAnalyzerActor extends AbstractAnalyzerActor(Consts.CS_BTC) {
         , mean("transactions_24h").as("avgTx24h"), mean("volume_24h").as("avgVolume24h"), mean("average_transaction_fee_24h").as("avgTxFee24h"), mean("inflation_usd_24h").as("avgInflatUSD24h"))
     dfAnalyticsRes.show()
  
-//    //compute correlation matrix
-//    computeCorrelationMatrix(df2)
+    //compute correlation matrix
+    computeCorrelationMatrix(df2)
     
     val ret = dfAnalyticsRes.sort("date_only").cache
     (ret.columns, ret.collectAsList().asScala.toList)        
