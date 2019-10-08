@@ -1,7 +1,9 @@
 # TAPAS - Timely Analytics and Predictions Actor System
 
 ## Overview
-A framework to execute machine learning and analytics tasks supported by actor model and in timely fashion. Based on Akka toolkit and implemented by Scala programming language, it adopts Apache Spark to compute parallel distributed analysis and Apache Kafka to decouple the layers of producer and consumer. 
+A framework to execute machine learning and data analytics tasks supported by actor model and in a timely fashion.
+Based on Akka toolkit following actor model, implemented by Scala programming language, it adopts Apache Spark to compute parallel distributed analysis and Apache Kafka to decouple the layers of producer and consumer.
+
 
 ## Installation
 * pull-down github repository
@@ -72,13 +74,13 @@ aaaa
 ``` 
 
 ## Pipeline
-The solution is composed of the following components:
-* ingestion [producer] component: gets data collection raw data files and send message to relative topic;
-* routing [consumer] compoment: reads data from topic and dispatcth message to the suitable component;
-* ml learning and data analytics [trainer]: executes a ml training phase reading raw data from a distributed file system, builds a ml model and computes advanced analytics;
-* prediction [predictor]: receive a request for data prediction and reply to it applyng a suitable ml model.
+The solution is composed of the following phases [components]:
+* ingestion [producer]: collects the raw data files and sends its by message to relative topic of a message broker;
+* routing [consumer]: reads the data from topic and dispatcthes the message to the suitable component, choosing action between save into a distributed file system if the message is a data input and forward request to predictor if the messagge is a prediction request; 
+* ml training [trainer]: executes a ml training phase reading raw data from a distributed file system, builds a ml model and notifies its predictor transferring to it the fresh model just computed;
+* prediction [predictor]: receives a prediction request and replies to it applying a suitable ml model and making a prediction;
+* analysis [analyzer]: computes statistics on the raw data from a distributed file system and notifies its predictor transferring to it the fresh stastistic data.
+
 
 ## Abstract implementation
-TODO describe abstraction, classes and roles
-
-TODO
+TODO ROB: describe abstraction, classes and roles above
