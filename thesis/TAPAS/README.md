@@ -1,5 +1,6 @@
 # TAPAS - Timely Analytics and Predictions Actor System
 
+
 ## Overview
 A framework to execute machine learning and data analytics tasks supported by actor model and in a timely fashion.
 Based on Akka toolkit following actor model, implemented by Scala programming language, it adopts Apache Spark to compute parallel distributed analysis, Apache Kafka to decouple the layers of producer and consumer, HDFS for distributed stored and processing of big data.
@@ -19,18 +20,11 @@ cd thesis/TAPAS
 ```
 
 * build executable (thanks to maven)
-	* with test cases
-	
-	```shell
-	mvn clean package
-	``` 
-	* or without test cases
-	
-	```shell 
-	mvn -DskipTests=true clean package
-	```
+```shell
+mvn clean package
+``` 
 
-## Start all daemons
+## Start all external framework daemons
 execute
 ```shell
 bin/start-all.sh
@@ -40,6 +34,7 @@ in order to start:
 * Apache Kafka - message broker
 * Apache HDFS - distributed file system
 * Apache Spark - distributed parallel computing
+
 
 ## Case studies
 
@@ -58,6 +53,7 @@ Dataset from https://archive.ics.uci.edu/ml/datasets/Activity+recognition+with+h
 Wine cultivars classification based on a chemical analysis (classification, 13 features, 3 classes).
 Dataset from https://archive.ics.uci.edu/ml/datasets/Wine
 
+
 ## Execution
 Run producer simulation in case study:
 
@@ -72,6 +68,7 @@ aaaa
 ```shell
 aaaa
 ``` 
+
 
 ## Pipeline
 The solution is composed of the following phases [components]:
