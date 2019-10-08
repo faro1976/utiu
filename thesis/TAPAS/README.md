@@ -2,7 +2,7 @@
 
 ## Overview
 A framework to execute machine learning and data analytics tasks supported by actor model and in a timely fashion.
-Based on Akka toolkit following actor model, implemented by Scala programming language, it adopts Apache Spark to compute parallel distributed analysis and Apache Kafka to decouple the layers of producer and consumer.
+Based on Akka toolkit following actor model, implemented by Scala programming language, it adopts Apache Spark to compute parallel distributed analysis, Apache Kafka to decouple the layers of producer and consumer, HDFS for distributed stored and processing of big data.
 
 
 ## Installation
