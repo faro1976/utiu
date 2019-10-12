@@ -19,6 +19,8 @@ import scala.collection.JavaConverters._
 import akka.actor.Props
 import org.apache.spark.ml.stat.Correlation
 import org.apache.spark.ml.linalg.Matrix
+import org.apache.spark.ml.feature.VectorAssembler
+import java.nio.file.StandardOpenOption
 
 object BTCAnalyzerActor {
   def props(): Props = Props(new BTCAnalyzerActor())
@@ -35,6 +37,7 @@ class BTCAnalyzerActor extends AbstractAnalyzerActor(Consts.CS_BTC) {
     df1.printSchema()
     import spark.implicits._
     import org.apache.spark.sql.functions._
+    
     val df2 = df1.select("context.cache.since", "data.transactions_24h", "data.difficulty", "data.volume_24h", "data.mempool_transactions", "data.mempool_size", "data.mempool_tps", "data.mempool_total_fee_usd", "data.average_transaction_fee_24h", "data.nodes", "data.inflation_usd_24h", "data.average_transaction_fee_usd_24h", "data.market_price_usd", "data.next_difficulty_estimate", "data.suggested_transaction_fee_per_byte_sat")    
     
     //do analytics
@@ -61,8 +64,11 @@ class BTCAnalyzerActor extends AbstractAnalyzerActor(Consts.CS_BTC) {
         , mean("transactions_24h").as("avgTx24h"), mean("volume_24h").as("avgVolume24h"), mean("average_transaction_fee_24h").as("avgTxFee24h"), mean("inflation_usd_24h").as("avgInflatUSD24h"))
     dfAnalyticsRes.show()
  
-    //compute correlation matrix
-    computeCorrelationMatrix(df2)
+    //compute correlation matrix   
+    val assembler = new VectorAssembler().setInputCols(Array("transactions_24h", "difficulty", "volume_24h", "mempool_transactions", "mempool_size", "mempool_tps", "mempool_total_fee_usd", "average_transaction_fee_24h", "nodes", "inflation_usd_24h", "average_transaction_fee_usd_24h", "market_price_usd", "next_difficulty_estimate", "suggested_transaction_fee_per_byte_sat")).setOutputCol("features")
+      .setHandleInvalid("skip")
+    val df3 = assembler.transform(df2).cache    
+    computeCorrelationMatrix(df3)
     
     val ret = dfAnalyticsRes.sort("date_only").cache
     (ret.columns, ret.collectAsList().asScala.toList)        
@@ -77,11 +83,12 @@ class BTCAnalyzerActor extends AbstractAnalyzerActor(Consts.CS_BTC) {
     val Row(coeff2: Matrix) = Correlation.corr(df, "features", "spearman").head
     println(coeff2.toString(Int.MaxValue, Int.MaxValue))
 
+    val buff = new StringBuilder()
     for (v <- coeff2.colIter) {
       for (i <- v.toArray) {
-        println(i)
+        buff.append(v.toArray.mkString(",") + "\n")
       }
-    }        
-  }
-  
+    }
+    writeFile(ANALYTICS_OUTPUT_FILE+".corrMtx", buff.toString, StandardOpenOption.TRUNCATE_EXISTING)
+  }  
 }

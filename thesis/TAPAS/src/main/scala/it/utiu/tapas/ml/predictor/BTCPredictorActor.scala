@@ -14,6 +14,7 @@ import it.utiu.tapas.base.AbstractPredictorActor
 import it.utiu.tapas.util.Consts
 import org.apache.spark.ml.util.MLReader
 import org.apache.spark.ml.regression.GBTRegressionModel
+import scala.util.parsing.json.JSON
 
 object BTCPredictorActor {
   def props(): Props = Props(new BTCPredictorActor())
@@ -40,4 +41,9 @@ class BTCPredictorActor() extends AbstractPredictorActor[GBTRegressionModel](Con
 
   
   override def getAlgo()= GBTRegressionModel.read
+  
+  override def getInput(msg: String): String = {
+    val map: Map[String, Any] = JSON.parseFull(msg).get.asInstanceOf[Map[String, Any]]
+    map.get("context").asInstanceOf[Map[String, Any]].get("since").get.asInstanceOf[String]
+  }
 }

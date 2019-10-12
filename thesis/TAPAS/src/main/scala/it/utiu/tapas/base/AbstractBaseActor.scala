@@ -3,6 +3,11 @@ package it.utiu.tapas.base
 import AbstractBaseActor.HDFS_URL
 import akka.actor.Actor
 import akka.actor.ActorLogging
+import akka.actor.OneForOneStrategy
+import akka.actor.SupervisorStrategy
+import java.nio.file.Paths
+import java.nio.file.StandardOpenOption
+import java.nio.file.Files
 
 object AbstractBaseActor {
   //static application params
@@ -17,12 +22,22 @@ abstract class AbstractBaseActor(name: String) extends Actor with ActorLogging {
   //dynamic application params
   val HDFS_CS_PATH = HDFS_URL + "/" + name + "/"
   val HDFS_CS_INPUT_PATH = HDFS_CS_PATH + "input/"
-  //TODO ROB spostare modello su HDFS?? problemi con overwrite??
-  //  val ML_MODEL_FILE = HDFS_URL+"ml-model/"+name+"/"
+  
+  //file paths
   val ML_MODEL_FILE = "./ml-model/" + name + "/"
   val ML_MODEL_FILE_COPY = "./ml-model/" + name + "_copy/"
   val RT_PATH = "./rt/" + name + "/"
   val RT_INPUT_PATH = RT_PATH + "input/"
-  val RT_OUTPUT_FILE = RT_PATH + "output/" + name + ".prediction"
-  val ANALYTICS_OUTPUT_FILE = "./analytics/" + name + "-stats.csv"
+  val RT_OUTPUT_FILE = RT_PATH + "output/" + name + "-prediction.csv"
+  val ANALYTICS_OUTPUT_FILE = RT_PATH + "output/" + name + "-stats.csv"
+  
+   override def supervisorStrategy = OneForOneStrategy() {
+      case _: Exception => SupervisorStrategy.Restart
+   }    
+  
+  protected def writeFile(file: String, text: String, mode: StandardOpenOption) {
+    val path = Paths.get(file)
+    if (!Files.exists(path)) Files.createFile(path) 
+    Files.write(path, text.toString.getBytes, mode)    
+  }
 }

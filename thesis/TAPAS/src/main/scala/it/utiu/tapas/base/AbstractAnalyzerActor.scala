@@ -9,22 +9,30 @@ import org.apache.spark.sql.Row
 import it.utiu.tapas.base.AbstractAnalyzerActor.StartAnalysis
 import it.utiu.tapas.base.AbstractAnalyzerActor.AnalysisFinished
 import scala.collection.mutable.ArrayBuffer
+import it.utiu.tapas.base.AbstractAnalyzerActor.AskAnalytics
+import it.utiu.tapas.base.AbstractAnalyzerActor.TellAnalytics
 
 object AbstractAnalyzerActor {
   case class StartAnalysis()
   case class AnalysisFinished()
+  case class AskAnalytics()
+  case class TellAnalytics(strCSV: String)
 }
 
 abstract class AbstractAnalyzerActor(name: String) extends AbstractBaseActor(name) {
-
+  var strCSV: String = null;  
+  
   override def receive: Receive = {
 
     case StartAnalysis() => doAnalysis()
+    
     case AnalysisFinished() =>
       log.info("analysis restart waiting...")
       Thread.sleep(60000)
       log.info("restart analysis")
       doAnalysis()
+    
+    case AskAnalytics => sender ! TellAnalytics(strCSV)
   }
 
   //(List[header_col], List[time, List[value]])
@@ -52,12 +60,10 @@ abstract class AbstractAnalyzerActor(name: String) extends AbstractBaseActor(nam
     stats._2.foreach(row=>
       buff.append(row.toSeq.mkString(",")+"\n")
     )
-    log.info("stats computed:\n"+buff)
-    Files.write(Paths.get(ANALYTICS_OUTPUT_FILE), buff.toString.getBytes, StandardOpenOption.CREATE)
-
+    log.info("stats computed:\n"+buff)    
+    strCSV = buff.toString
     
     //terminate context
-    //TODO ROB lasciare aperto così lo reucpero al prossimo giro??
     //spark.stop()
 
     //self-message to start a new training

@@ -26,7 +26,7 @@ abstract class AbstractPredictorActor[T <: Model[T]](name: String) extends Abstr
   
   override def receive: Receive = {
     case AskPrediction(msgs: String) =>
-      sender ! TellPrediction(doPrediction(msgs), msgs)
+      sender ! TellPrediction(doPrediction(msgs), getInput(msgs))
 
     case AbstractTrainerActor.TrainingFinished(model: Transformer) =>
       mlModel = model.asInstanceOf[Model[T]];
@@ -37,16 +37,23 @@ abstract class AbstractPredictorActor[T <: Model[T]](name: String) extends Abstr
   
   def doInternalPrediction(msgs: String, spark: SparkSession, model: Model[T]): String
   def getAlgo(): MLReader[T]
+  def getInput(msg: String): String = msg 
 
   private def doPrediction(msgs: String): String = {
     log.info("prediction requested")
-    //start Spark session
+    
+    //Spark Configuration
     val conf = new SparkConf().setAppName(name + "-prediction")
       .setMaster(AbstractBaseActor.SPARK_URL_PREDICTION)
+      .set("fs.hdfs.impl", "org.apache.hadoop.hdfs.DistributedFileSystem")
+      .set("fs.file.impl","org.apache.hadoop.fs.LocalFileSystem")      
 
+    //Spark Session 
     val spark = SparkSession.builder
       .config(conf)
       .getOrCreate()
+      
+    //Spark Context
     val sc = spark.sparkContext
     sc.setLogLevel("ERROR")
 
@@ -55,8 +62,7 @@ abstract class AbstractPredictorActor[T <: Model[T]](name: String) extends Abstr
     //invoke internal
     val prediction = doInternalPrediction(msgs, spark, mlModel)
 
-    //terminazione contesto
-    //TODO ROB lasciare aperto così lo reucpero al prossimo giro??
+    //terminate context
     //    spark.stop()
 
     return prediction

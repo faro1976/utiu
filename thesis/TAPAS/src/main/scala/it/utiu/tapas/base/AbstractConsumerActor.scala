@@ -29,6 +29,11 @@ import java.nio.file.Files
 import java.nio.file.Paths
 import java.nio.file.StandardOpenOption
 import org.apache.hadoop.fs.Path
+import it.utiu.tapas.base.AbstractAnalyzerActor
+import akka.actor.Cancellable
+import scala.concurrent.duration.DurationInt
+import scala.concurrent.ExecutionContext.Implicits.global
+import java.text.SimpleDateFormat
 
 
 object AbstractConsumerActor {
@@ -36,20 +41,33 @@ object AbstractConsumerActor {
   case class StartConsuming()
   //max buffered items to store 
   val BUFF_SIZE = 5
+  val tmstFormat = new SimpleDateFormat("yyMMdd hh:mm")
 }
 
 
-abstract class AbstractConsumerActor(name: String, topic: String, predictor: ActorRef, header: String) extends AbstractBaseActor(name) {
+abstract class AbstractConsumerActor(name: String, topic: String, predictor: ActorRef, analyzer: ActorRef, header: String) extends AbstractBaseActor(name) {
+  var analyzerScheduler:Option[Cancellable] = None
+  
   override def receive: Receive = {
     //start consuming message
-    case AbstractConsumerActor.StartConsuming()            => doConsuming()
+    case AbstractConsumerActor.StartConsuming() => 
+      doConsuming()
+      if (analyzer!=null) {
+        analyzerScheduler = Some(context.system.scheduler.schedule(10 second, 120 second) {        
+          context.actorSelection(analyzer.path) ! AbstractAnalyzerActor.AskAnalytics()
+        })                      
+      }
+      
     //received prediction message
     case AbstractPredictorActor.TellPrediction(prediction, input) => 
       log.info("received prediction: " + prediction)
-      val txtOut = new Date() + "@" + prediction + "@" + input + "\n"
-      val path = Paths.get(RT_OUTPUT_FILE)
-      if (!Files.exists(path)) Files.createFile(path) 
-      Files.write(path, txtOut.getBytes, StandardOpenOption.APPEND)
+      val txtOut = AbstractConsumerActor.tmstFormat.format(new Date()) + "," + input + "," + prediction + "\n"
+      writeFile(RT_OUTPUT_FILE, txtOut, StandardOpenOption.APPEND)
+      
+    case AbstractAnalyzerActor.TellAnalytics(strCSV) =>
+      if (strCSV != null) {
+        writeFile(ANALYTICS_OUTPUT_FILE, strCSV, StandardOpenOption.CREATE)
+      }      
   }
 
   //buffered messages to store

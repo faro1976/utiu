@@ -90,27 +90,44 @@
 	    <version>15.0</version>
 	</dependency>	   
 
-	<!-- Alpakka and Akka -->
+	<!-- https://mvnrepository.com/artifact/com.typesafe.akka/akka-actor -->
 	<dependency>
-  		<groupId>com.typesafe.akka</groupId>
-		<artifactId>akka-stream-kafka_2.11</artifactId>
-    		<version>1.0.5</version>
-  	</dependency>
-  
-<!-- https://mvnrepository.com/artifact/org.mongodb.spark/mongo-spark-connector -->
-<dependency>
-    <groupId>org.mongodb.spark</groupId>
-    <artifactId>mongo-spark-connector_2.11</artifactId>
-    <version>2.4.1</version>
-</dependency>
+	    <groupId>com.typesafe.akka</groupId>
+	    <artifactId>akka-actor_2.11</artifactId>
+	    <version>2.5.25</version>
+	</dependency>
+	
+	<!-- https://mvnrepository.com/artifact/com.typesafe.akka/akka-slf4j -->
+	<dependency>
+	    <groupId>com.typesafe.akka</groupId>
+	    <artifactId>akka-slf4j_2.11</artifactId>
+	    <version>2.5.25</version>
+	</dependency>
+	
+	<!-- https://mvnrepository.com/artifact/com.typesafe.akka/akka-stream -->
+	<dependency>
+	    <groupId>com.typesafe.akka</groupId>
+	    <artifactId>akka-stream_2.11</artifactId>
+	    <version>2.5.25</version>
+	</dependency>
 
-<!-- https://mvnrepository.com/artifact/org.mongodb.scala/mongo-scala-driver -->
-<dependency>
-    <groupId>org.mongodb.scala</groupId>
-    <artifactId>mongo-scala-driver_2.11</artifactId>
-    <version>2.7.0</version>
-</dependency>
-    
+
+	<!-- https://mvnrepository.com/artifact/com.typesafe.akka/akka-stream-kafka -->
+	<dependency>
+	    <groupId>com.typesafe.akka</groupId>
+	    <artifactId>akka-stream-kafka_2.11</artifactId>
+	    <version>1.0.5</version>	    
+	</dependency>
+	
+	
+
+	<!-- https://mvnrepository.com/artifact/ch.qos.logback/logback-classic -->
+	<dependency>
+	    <groupId>ch.qos.logback</groupId>
+	    <artifactId>logback-classic</artifactId>
+	    <version>1.2.3</version>
+	</dependency>
+      
 	<!-- https://mvnrepository.com/artifact/commons-io/commons-io -->
 	<dependency>
 	    <groupId>commons-io</groupId>
@@ -118,6 +135,7 @@
 	    <version>2.6</version>
 	</dependency>
 
+	
   </dependencies>
   
 
@@ -145,13 +163,42 @@
           </execution>
         </executions>
       </plugin>
+	<!-- Maven Assembly Plugin -->
+	<plugin>
+		<groupId>org.apache.maven.plugins</groupId>
+		<artifactId>maven-assembly-plugin</artifactId>
+		<version>2.4.1</version>
+		<configuration>
+			<!-- get all project dependencies -->
+			<descriptorRefs>
+				<descriptorRef>jar-with-dependencies</descriptorRef>
+			</descriptorRefs>
+			<!-- MainClass in mainfest make a executable jar -->
+			<archive>
+			  <manifest>
+				<mainClass>it.utiu.tapas.Runner</mainClass>
+			  </manifest>
+			</archive>	
+		</configuration>
+		<executions>
+		  <execution>
+			<id>make-assembly</id>
+			<!-- bind to the packaging phase -->
+			<phase>package</phase> 
+			<goals>
+				<goal>single</goal>
+			</goals>
+		  </execution>
+		</executions>
+	</plugin> 
+	<!-- Maven Surefire Plugin -->        
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
         <version>2.21.0</version>
         <configuration>
-          <!-- Tests will be run with scalatest-maven-plugin instead -->
-          <skipTests>true</skipTests>
+			<!-- Tests will be run with scalatest-maven-plugin instead -->
+	        	<skipTests>true</skipTests>
         </configuration>
       </plugin>
       <plugin>

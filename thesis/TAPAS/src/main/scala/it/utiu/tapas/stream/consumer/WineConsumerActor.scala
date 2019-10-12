@@ -6,11 +6,11 @@ import it.utiu.tapas.util.Consts
 
 object WineConsumerActor {
 
-  def props(predictor: ActorRef): Props = Props(new WineConsumerActor(predictor))
+  def props(predictor: ActorRef, analyzer: ActorRef): Props = Props(new WineConsumerActor(predictor, analyzer))
   val header = "Class,Alcohol,Malic,Ash,Alcalinity,Magnesium,phenols,Flavanoids,Nonflavanoid,Proanthocyanins,Color,Hue,OD280,Proline"
   val COLS_NUM = 14
 }
 
-class WineConsumerActor(predictor: ActorRef) extends AbstractConsumerActor(Consts.CS_WINE, Consts.TOPIC_WINE, predictor, WineConsumerActor.header) {
+class WineConsumerActor(predictor: ActorRef, analyzer: ActorRef) extends AbstractConsumerActor(Consts.CS_WINE, Consts.TOPIC_WINE, predictor, analyzer, WineConsumerActor.header) {
  override def isPredictionRequest(row: String) : Boolean = row.split(",").size == (ActivityConsumerActor.COLS_NUM-1)
 }

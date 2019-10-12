@@ -7,6 +7,8 @@ import it.utiu.tapas.base.AbstractTrainerActor.StartTraining
 import it.utiu.tapas.base.AbstractTrainerActor.TrainingFinished
 import org.apache.spark.ml.Model
 import org.apache.spark.ml.Transformer
+import java.text.SimpleDateFormat
+import org.apache.hadoop.hdfs.DistributedFileSystem
 
 
 object AbstractTrainerActor {
@@ -34,13 +36,20 @@ abstract class AbstractTrainerActor[T <: Model[T]](name: String) extends Abstrac
   
   private def doTraining() {
     log.info("start training for "+name+"...")
-    //start Spark session
+    
+    //Spark Configuration
     val conf = new SparkConf()
       .setAppName(name + "-training")
       .setMaster(AbstractBaseActor.SPARK_URL_TRAINING)
+      .set("fs.hdfs.impl", "org.apache.hadoop.hdfs.DistributedFileSystem")
+      .set("fs.file.impl","org.apache.hadoop.fs.LocalFileSystem")
+    
+    //Spark Session
     val spark = SparkSession.builder
       .config(conf)
       .getOrCreate()
+    
+    //Spark Context
     val sc = spark.sparkContext
     sc.setLogLevel("ERROR")
 
@@ -53,7 +62,6 @@ abstract class AbstractTrainerActor[T <: Model[T]](name: String) extends Abstrac
     log.info("saved ml model into " + ML_MODEL_FILE + "...")
 
     //terminate context
-    //TODO ROB lasciare aperto così lo reucpero al prossimo giro??
     //spark.stop()
 
     //notify predictor forcing model refresh
