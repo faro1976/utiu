@@ -30,9 +30,9 @@ object BTCAnalyzerActor {
 class BTCAnalyzerActor extends AbstractAnalyzerActor(Consts.CS_BTC) {
   override def doInternalAnalysis(spark: SparkSession): (Array[String], scala.collection.immutable.List[Row]) = {
         
-    val df1 = spark.read.json(HDFS_CS_PATH + "*")
+//    val df1 = spark.read.json(HDFS_CS_PATH + "*")
 //    val df1 = spark.read.json(HDFS_CS_PATH + "blockchair/*")    
-//        val df1 = spark.read.json(HDFS_CS_PATH + "blockchair/small/*")
+        val df1 = spark.read.json(HDFS_CS_PATH + "blockchair/small/*")
     df1.show
     df1.printSchema()
     import spark.implicits._
@@ -89,6 +89,6 @@ class BTCAnalyzerActor extends AbstractAnalyzerActor(Consts.CS_BTC) {
         buff.append(v.toArray.mkString(",") + "\n")
       }
     }
-    writeFile(ANALYTICS_OUTPUT_FILE+".corrMtx", buff.toString, StandardOpenOption.TRUNCATE_EXISTING)
+    writeFile(ANALYTICS_OUTPUT_FILE+".corrMtx", buff.toString, StandardOpenOption.APPEND)
   }  
 }

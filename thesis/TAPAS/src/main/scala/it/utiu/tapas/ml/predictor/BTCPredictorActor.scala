@@ -14,7 +14,10 @@ import it.utiu.tapas.base.AbstractPredictorActor
 import it.utiu.tapas.util.Consts
 import org.apache.spark.ml.util.MLReader
 import org.apache.spark.ml.regression.GBTRegressionModel
-import scala.util.parsing.json.JSON
+import com.google.gson.Gson
+import scala.util.parsing.json.JSONObject
+import com.google.gson.JsonObject
+import java.text.SimpleDateFormat
 
 object BTCPredictorActor {
   def props(): Props = Props(new BTCPredictorActor())
@@ -42,8 +45,11 @@ class BTCPredictorActor() extends AbstractPredictorActor[GBTRegressionModel](Con
   
   override def getAlgo()= GBTRegressionModel.read
   
-  override def getInput(msg: String): String = {
-    val map: Map[String, Any] = JSON.parseFull(msg).get.asInstanceOf[Map[String, Any]]
-    map.get("context").asInstanceOf[Map[String, Any]].get("since").get.asInstanceOf[String]
-  }
+  override def getInput(line: String): String = {
+    val gson = new Gson()
+    val jobj = gson.fromJson(line, classOf[JsonObject])
+    val since = jobj.getAsJsonObject("context").getAsJsonObject("cache").get("since").getAsString
+    val tSince = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss").parse(since)
+    tmstFormat.format(tSince)
+ }
 }

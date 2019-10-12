@@ -40,13 +40,19 @@ abstract class AbstractAnalyzerActor(name: String) extends AbstractBaseActor(nam
 
   private def doAnalysis() {
     log.info("start analysis...")
-    //start Spark session
+    //Spark Configuration
     val conf = new SparkConf()
       .setAppName(name + "-training")
       .setMaster(AbstractBaseActor.SPARK_URL_TRAINING)
+      .set("fs.hdfs.impl", "org.apache.hadoop.hdfs.DistributedFileSystem")
+      .set("fs.file.impl","org.apache.hadoop.fs.LocalFileSystem")
+      
+    //Spark Session  
     val spark = SparkSession.builder
       .config(conf)
       .getOrCreate()
+      
+    //Spark Context  
     val sc = spark.sparkContext
     sc.setLogLevel("ERROR")
 

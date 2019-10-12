@@ -21,11 +21,11 @@ import it.utiu.tapas.base.AbstractTrainerActor
 import akka.actor.ActorRef
 import it.utiu.tapas.util.Consts
 import com.google.gson.Gson
-import scala.util.parsing.json.JSON
 import java.text.SimpleDateFormat
 import java.nio.file.StandardOpenOption
 import AbstractConsumerActor._
 import java.util.Date
+import com.google.gson.JsonObject
 
 
 object BTCConsumerActor {
@@ -34,14 +34,16 @@ object BTCConsumerActor {
 }
 
 class BTCConsumerActor(predictor: ActorRef, analyzer: ActorRef) extends AbstractConsumerActor(Consts.CS_BTC, Consts.TOPIC_BTC, predictor, analyzer, BTCConsumerActor.header) {
-     override def isPredictionRequest(line: String): Boolean = {
-       val map: Map[String, Any] = JSON.parseFull(line).get.asInstanceOf[Map[String, Any]]
-       val since = map.get("context").asInstanceOf[Map[String, Any]].get("since").get.asInstanceOf[String]
-       val usd = map.get("data").asInstanceOf[Map[String, Any]].get("market_price_usd").get.asInstanceOf[String]
+     override def isPredictionRequest(line: String) = {
+       val gson = new Gson()
+       val jobj = gson.fromJson(line, classOf[JsonObject])
+       val since = jobj.getAsJsonObject("context").getAsJsonObject("cache").get("since").getAsString
+       val usd = jobj.getAsJsonObject("data").get("market_price_usd").getAsString
        val tSince = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss").parse(since)
        val row = tmstFormat.format(new Date()) + "," + tmstFormat.format(tSince) + "," + usd + "\n" 
-       writeFile(RT_OUTPUT_FILE+".hit.csv", row.toString, StandardOpenOption.TRUNCATE_EXISTING)
+       writeFile(RT_OUTPUT_PATH + Consts.CS_BTC + "-hit.csv", row.toString, StandardOpenOption.APPEND)
        true
      }
+
      override def isAlwaysInput() : Boolean = true
 }

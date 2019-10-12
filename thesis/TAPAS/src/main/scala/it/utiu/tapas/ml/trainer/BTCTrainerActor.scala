@@ -36,6 +36,12 @@ import java.io.File
 import org.apache.spark.ml.Transformer
 import akka.actor.ActorLogging
 import akka.event.LoggingAdapter
+import org.apache.spark.sql.Dataset
+import org.apache.spark.ml.regression.LinearRegression
+import org.apache.spark.ml.regression.DecisionTreeRegressor
+import org.apache.spark.ml.regression.RandomForestRegressor
+import java.nio.file.StandardOpenOption
+import java.util.Date
 
 object BTCTrainerActor {
   def props(): Props =
@@ -52,9 +58,9 @@ class BTCTrainerActor extends AbstractTrainerActor(Consts.CS_BTC) {
     import org.apache.spark.sql.functions._
 
     //load dataset from csv inferring schema
-    val df1 = spark.read.json(HDFS_CS_PATH + "*")
+//    val df1 = spark.read.json(HDFS_CS_PATH + "*")
 //    val df1 = spark.read.json(HDFS_CS_PATH + "blockchair/*")
-//        val df1 = spark.read.json(HDFS_CS_PATH + "blockchair/small/*")
+        val df1 = spark.read.json(HDFS_CS_PATH + "blockchair/small/*")
     df1.show
     df1.printSchema()
     import spark.implicits._
@@ -104,7 +110,58 @@ class BTCTrainerActor extends AbstractTrainerActor(Consts.CS_BTC) {
     println("training count:" + trainingData.count())
     println("test count:" + testData.count())
 
-    //build GBT regression model
+    
+    //LinearRegression
+    //build regression model
+    val lr = new LinearRegression()
+      .setMaxIter(10)
+      .setRegParam(0.3)
+      .setElasticNetParam(0.8)
+      
+    //learn from training set
+    val modelLR = lr.fit(trainingData)
+      
+    //print model parameters
+    println(s"Coefficients: ${modelLR.coefficients} Intercept: ${modelLR.intercept}")
+    
+    //validate model by test set
+    val predictionsLR = modelLR.transform(testData)
+    
+    evalRegression("LinearRegression", predictionsLR)
+
+    
+    //DecisionTreeRegression
+    //build regression model
+    val dtr = new DecisionTreeRegressor()
+      .setLabelCol("label")
+      .setFeaturesCol("features")    
+      
+    //learn from training set
+    val modelDTR = dtr.fit(trainingData)
+      
+    //validate model by test set
+    val predictionsDTR = modelDTR.transform(testData)
+    
+    evalRegression("DecisionTreeRegression", predictionsDTR)
+
+    
+    //RandomForestRegressor
+    //build regression model
+    val rfr = new RandomForestRegressor()
+      .setLabelCol("label")
+      .setFeaturesCol("features")    
+      
+    //learn from training set
+    val modelRFR = rfr.fit(trainingData)
+    
+    //validate model by test set
+    val predictionsRFR = modelRFR.transform(testData)
+    
+    evalRegression("RandomForestRegressor", predictionsRFR)
+    
+    
+    //GBT
+    //build regression model
     val GBT = new GBTRegressor()
       .setLabelCol("label")
       .setFeaturesCol("features")
@@ -117,37 +174,45 @@ class BTCTrainerActor extends AbstractTrainerActor(Consts.CS_BTC) {
     println(s"Num trees: ${modelGBT.numTrees}")
 
     //validate model by test set
-    val predictions = modelGBT.transform(testData)
-    predictions.show()
+    val predictionsGBT = modelGBT.transform(testData)
+    predictionsGBT.show()
 
-    //get predictions
-    val valuesAndPreds = df1.rdd.map { point =>
-      val prediction = modelGBT.predict(point.getAs[Vector]("features"))
-      (prediction, point.getAs[Double]("label"))
-    }
-
+//    //get predictions
+//    val valuesAndPreds = df1.rdd.map { point =>
+//      val prediction = modelGBT.predict(point.getAs[Vector]("features"))
+//      (prediction, point.getAs[Double]("label"))
+//    }
+    
+    evalRegression("GBTRegressor", predictionsGBT)
+    
+    
+    modelGBT
+  }
+  
+  private def evalRegression(algo: String, predictions: DataFrame) {
+    
     //print ml evaluation
     val evaluator = new RegressionEvaluator()
       .setLabelCol("label")
       .setPredictionCol("prediction")
       .setMetricName("rmse")
     val rmse = evaluator.evaluate(predictions)
-    println(s"Root mean squared error: $rmse")
+    log.info(s"$algo - Root mean squared error: $rmse")
 
     //print ml metrics
     evaluator.setMetricName("mse")
     val mse = evaluator.evaluate(predictions)
-    println(s"Mean squared error: $mse")
+    log.info(s"$algo - Mean squared error: $mse")
 
     evaluator.setMetricName("r2")
     val r2 = evaluator.evaluate(predictions)
-    println(s"r2: $r2")
+    log.info(s"$algo - r2: $r2")
 
     evaluator.setMetricName("mae")
     val mae = evaluator.evaluate(predictions)
-    println(s"Mean absolute error: $mae")
+    log.info(s"$algo - Mean absolute error: $mae")   
     
-    
-    return modelGBT
+    val str = tmstFormat.format(new Date()) + "," + algo + "," + r2
+    writeFile(RT_OUTPUT_PATH + Consts.CS_BTC + "-regression-eval.csv", str, StandardOpenOption.APPEND)
   }
 }

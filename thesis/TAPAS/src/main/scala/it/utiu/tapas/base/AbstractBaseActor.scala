@@ -8,6 +8,7 @@ import akka.actor.SupervisorStrategy
 import java.nio.file.Paths
 import java.nio.file.StandardOpenOption
 import java.nio.file.Files
+import java.text.SimpleDateFormat
 
 object AbstractBaseActor {
   //static application params
@@ -28,8 +29,12 @@ abstract class AbstractBaseActor(name: String) extends Actor with ActorLogging {
   val ML_MODEL_FILE_COPY = "./ml-model/" + name + "_copy/"
   val RT_PATH = "./rt/" + name + "/"
   val RT_INPUT_PATH = RT_PATH + "input/"
-  val RT_OUTPUT_FILE = RT_PATH + "output/" + name + "-prediction.csv"
-  val ANALYTICS_OUTPUT_FILE = RT_PATH + "output/" + name + "-stats.csv"
+  val RT_OUTPUT_PATH = RT_PATH + "output/"
+  val RT_OUTPUT_FILE = RT_OUTPUT_PATH + name + "-prediction.csv"
+  val ANALYTICS_OUTPUT_FILE = RT_OUTPUT_PATH + name + "-stats.csv"
+  
+  //date pattern for csv
+  val tmstFormat = new SimpleDateFormat("yyMMdd hh:mm")
   
    override def supervisorStrategy = OneForOneStrategy() {
       case _: Exception => SupervisorStrategy.Restart

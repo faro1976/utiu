@@ -40,8 +40,7 @@ object AbstractConsumerActor {
   //start consuming message
   case class StartConsuming()
   //max buffered items to store 
-  val BUFF_SIZE = 5
-  val tmstFormat = new SimpleDateFormat("yyMMdd hh:mm")
+  val BUFF_SIZE = 5  
 }
 
 
@@ -61,12 +60,12 @@ abstract class AbstractConsumerActor(name: String, topic: String, predictor: Act
     //received prediction message
     case AbstractPredictorActor.TellPrediction(prediction, input) => 
       log.info("received prediction: " + prediction)
-      val txtOut = AbstractConsumerActor.tmstFormat.format(new Date()) + "," + input + "," + prediction + "\n"
+      val txtOut = tmstFormat.format(new Date()) + "," + input + "," + prediction + "\n"
       writeFile(RT_OUTPUT_FILE, txtOut, StandardOpenOption.APPEND)
       
     case AbstractAnalyzerActor.TellAnalytics(strCSV) =>
       if (strCSV != null) {
-        writeFile(ANALYTICS_OUTPUT_FILE, strCSV, StandardOpenOption.CREATE)
+        writeFile(ANALYTICS_OUTPUT_FILE, strCSV, StandardOpenOption.APPEND)
       }      
   }
 
@@ -74,8 +73,8 @@ abstract class AbstractConsumerActor(name: String, topic: String, predictor: Act
   val buffer = ArrayBuffer[String]()
   
   //internal
-  def isPredictionRequest(row: String) : Boolean = false
-  def isAlwaysInput() : Boolean = false
+  def isPredictionRequest(row: String): Boolean = false
+  def isAlwaysInput(): Boolean = false
   
   private def doConsuming() {
     log.info("start consuming for "+name+"...")
@@ -91,7 +90,7 @@ abstract class AbstractConsumerActor(name: String, topic: String, predictor: Act
       Consumer.plainSource(consumerSettings, Subscriptions.topics(topic))
         .mapAsync(1) { msg =>
           val strMsg = msg.value
-          log.info(s"receviced message value: ${strMsg}")
+          log.info(s"received message value: ${strMsg}")
           val isPredictionReq = isPredictionRequest(strMsg)
           if (!isPredictionReq || isAlwaysInput) {
             //input for training action
