@@ -67,10 +67,9 @@ class Runner(system: ActorSystem, cs: String) {
         trainerRef = system.actorOf(BTCTrainerActor.props(), "trainer-btc")
         predictorRef = system.actorOf(BTCPredictorActor.props(), "predictor-btc")
         feederRef = system.actorOf(BTCFeederActor.props(), "feeder-btc")
-        analyzerRef = system.actorOf(BTCAnalyzerActor.props(feederRef), "analyzer-btc")        
+        analyzerRef = system.actorOf(BTCAnalyzerActor.props(), "analyzer-btc")        
         consumerRef = system.actorOf(BTCConsumerActor.props(predictorRef, feederRef), "consumer-btc")
-        producerRef = system.actorOf(BTCProducerActor.props(), "producer-btc")
-        
+        producerRef = system.actorOf(BTCProducerActor.props(), "producer-btc")        
       case CS_WINE =>
         //create wine actors
         trainerRef = system.actorOf(WineTrainerActor.props(), "trainer-wine")

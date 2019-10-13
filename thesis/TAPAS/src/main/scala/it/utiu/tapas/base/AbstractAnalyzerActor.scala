@@ -16,7 +16,7 @@ object AbstractAnalyzerActor {
   case class AnalysisFinished(strCSV: String)
 }
 
-abstract class AbstractAnalyzerActor(name: String, feeder: ActorRef) extends AbstractBaseActor(name) {
+abstract class AbstractAnalyzerActor(name: String) extends AbstractBaseActor(name) {
     
   
   override def receive: Receive = {
@@ -67,7 +67,7 @@ abstract class AbstractAnalyzerActor(name: String, feeder: ActorRef) extends Abs
     //spark.stop()
 
     //message to refresh feeder stats data
-    feeder ! AbstractAnalyzerActor.AnalysisFinished(buff.toString)
+    context.actorSelection("/user/feeder-" + name) ! AbstractAnalyzerActor.AnalysisFinished(buff.toString) 
     
     //self-message to start a new training
     self ! AbstractAnalyzerActor.AnalysisFinished(buff.toString)

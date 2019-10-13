@@ -24,16 +24,16 @@ import java.nio.file.StandardOpenOption
 import akka.actor.ActorRef
 
 object BTCAnalyzerActor {
-  def props(feeder: ActorRef): Props = Props(new BTCAnalyzerActor(feeder))
+  def props(): Props = Props(new BTCAnalyzerActor())
 
 }
 
-class BTCAnalyzerActor(feeder: ActorRef) extends AbstractAnalyzerActor(Consts.CS_BTC, feeder) {
+class BTCAnalyzerActor() extends AbstractAnalyzerActor(Consts.CS_BTC) {
   override def doInternalAnalysis(spark: SparkSession): (Array[String], scala.collection.immutable.List[Row]) = {
         
-//    val df1 = spark.read.json(HDFS_CS_PATH + "*")
+    val df1 = spark.read.json(HDFS_CS_PATH + "*")
 //    val df1 = spark.read.json(HDFS_CS_PATH + "blockchair/*")    
-        val df1 = spark.read.json(HDFS_CS_PATH + "blockchair/small/*")
+//        val df1 = spark.read.json(HDFS_CS_PATH + "blockchair/small/*")
     df1.show
     df1.printSchema()
     import spark.implicits._

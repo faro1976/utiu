@@ -58,9 +58,9 @@ class BTCTrainerActor extends AbstractTrainerActor(Consts.CS_BTC) {
     import org.apache.spark.sql.functions._
 
     //load dataset from csv inferring schema
-//    val df1 = spark.read.json(HDFS_CS_PATH + "*")
+    val df1 = spark.read.json(HDFS_CS_PATH + "*")
 //    val df1 = spark.read.json(HDFS_CS_PATH + "blockchair/*")
-        val df1 = spark.read.json(HDFS_CS_PATH + "blockchair/small/*")
+//        val df1 = spark.read.json(HDFS_CS_PATH + "blockchair/small/*")
 //    df1.show
 //    df1.printSchema()
     import spark.implicits._
