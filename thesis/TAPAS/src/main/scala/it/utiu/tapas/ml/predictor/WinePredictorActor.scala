@@ -13,15 +13,16 @@ import akka.actor.Props
 import it.utiu.tapas.base.AbstractPredictorActor
 import it.utiu.tapas.util.Consts
 import org.apache.spark.ml.util.MLReader
+import org.apache.spark.ml.Transformer
 
 object WinePredictorActor {
   def props(): Props = Props(new WinePredictorActor())
 
 }
 
-class WinePredictorActor() extends AbstractPredictorActor[LogisticRegressionModel](Consts.CS_WINE) {
+class WinePredictorActor() extends AbstractPredictorActor(Consts.CS_WINE) {
 
-  override def doInternalPrediction(msgs: String, spark: SparkSession, model: Model[LogisticRegressionModel]): String = {
+  override def doInternalPrediction(msgs: String, spark: SparkSession, model: Transformer): String = {
     val lrModel = model.asInstanceOf[LogisticRegressionModel]
 
     //cast to List[List[Double]]
@@ -65,5 +66,5 @@ class WinePredictorActor() extends AbstractPredictorActor[LogisticRegressionMode
   }
 
   
-  override def getAlgo()= LogisticRegressionModel.read
+//  override def getAlgo()= LogisticRegressionModel.read
 }

@@ -35,13 +35,13 @@ object BTCConsumerActor {
 
 class BTCConsumerActor(predictor: ActorRef, analyzer: ActorRef) extends AbstractConsumerActor(Consts.CS_BTC, Consts.TOPIC_BTC, predictor, analyzer, BTCConsumerActor.header) {
      override def isPredictionRequest(line: String) = {
-       val gson = new Gson()
-       val jobj = gson.fromJson(line, classOf[JsonObject])
-       val since = jobj.getAsJsonObject("context").getAsJsonObject("cache").get("since").getAsString
-       val usd = jobj.getAsJsonObject("data").get("market_price_usd").getAsString
-       val tSince = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss").parse(since)
-       val row = tmstFormat.format(new Date()) + "," + tmstFormat.format(tSince) + "," + usd + "\n" 
-       writeFile(RT_OUTPUT_PATH + Consts.CS_BTC + "-hit.csv", row.toString, StandardOpenOption.APPEND)
+//       val gson = new Gson()
+//       val jobj = gson.fromJson(line, classOf[JsonObject])
+//       val since = jobj.getAsJsonObject("context").getAsJsonObject("cache").get("since").getAsString
+//       val usd = jobj.getAsJsonObject("data").get("market_price_usd").getAsString
+//       val tSince = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss").parse(since)
+//       val row = tmstFormat.format(new Date()) + "," + tmstFormat.format(tSince) + "," + usd + "\n" 
+//       writeFile(RT_OUTPUT_PATH + Consts.CS_BTC + "-hit.csv", row.toString, StandardOpenOption.APPEND)
        true
      }
 

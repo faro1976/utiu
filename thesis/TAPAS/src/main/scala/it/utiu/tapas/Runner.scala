@@ -12,9 +12,7 @@ import it.utiu.anavis.BTCTrainerActor
 import it.utiu.anavis.WineTrainerActor
 import it.utiu.tapas.base.AbstractAnalyzerActor
 import it.utiu.tapas.base.AbstractTrainerActor
-import it.utiu.tapas.ml.analyzer.BTCAnalyzerActor
 import it.utiu.tapas.ml.predictor.ActivityPredictorActor
-import it.utiu.tapas.ml.predictor.BTCPredictorActor
 import it.utiu.tapas.ml.predictor.WinePredictorActor
 import it.utiu.tapas.stream.consumer.AbstractConsumerActor
 import it.utiu.tapas.stream.consumer.AbstractProducerActor
@@ -31,6 +29,9 @@ import akka.actor.SupervisorStrategy
 import akka.actor.OneForOneStrategy
 import scala.concurrent.duration._
 import akka.Version
+import it.utiu.tapas.stats.analyzer.BTCAnalyzerActor
+import it.utiu.tapas.ml.predictor.BTCPredictorActor
+import it.utiu.tapas.ml.predictor.BTCFeederActor
 
 object Runner {
 
@@ -38,7 +39,7 @@ object Runner {
     //create akka system
     val system = ActorSystem("tapas")
     println("starting TAPAS at " + new Date() + "...")
-    val cs = if (args.size > 0) args(0) else CS_BTC
+    val cs = if (args.size > 0) args(0) else CS_BTC  //default case study
     val app = new Runner(system, cs)
     app.run(cs)
   }
@@ -51,6 +52,7 @@ class Runner(system: ActorSystem, cs: String) {
   var consumerRef: ActorRef = null
   var producerRef: ActorRef = null
   var analyzerRef: ActorRef = null
+  var feederRef: ActorRef = null
 
   def run(cs: String): Unit = {
     //create actors
@@ -64,8 +66,9 @@ class Runner(system: ActorSystem, cs: String) {
       case CS_BTC =>
         trainerRef = system.actorOf(BTCTrainerActor.props(), "trainer-btc")
         predictorRef = system.actorOf(BTCPredictorActor.props(), "predictor-btc")
-        analyzerRef = system.actorOf(BTCAnalyzerActor.props(), "analyzer-btc")
-        consumerRef = system.actorOf(BTCConsumerActor.props(predictorRef, analyzerRef), "consumer-btc")
+        feederRef = system.actorOf(BTCFeederActor.props(), "feeder-btc")
+        analyzerRef = system.actorOf(BTCAnalyzerActor.props(feederRef), "analyzer-btc")        
+        consumerRef = system.actorOf(BTCConsumerActor.props(predictorRef, feederRef), "consumer-btc")
         producerRef = system.actorOf(BTCProducerActor.props(), "producer-btc")
         
       case CS_WINE =>
@@ -78,13 +81,17 @@ class Runner(system: ActorSystem, cs: String) {
     }
 
     //start actors
+    //trainer
     trainerRef ! AbstractTrainerActor.StartTraining()
     Thread.sleep(2000)
+    //conumser
     consumerRef ! AbstractConsumerActor.StartConsuming()
     Thread.sleep(2000)
+    //producer
     producerRef ! AbstractProducerActor.StartProducing()
     Thread.sleep(2000)
-    if (analyzerRef != null) analyzerRef ! AbstractAnalyzerActor.StartAnalysis()
+    //stats data feeder (if supported)
+    if (analyzerRef != null) analyzerRef ! AbstractAnalyzerActor.StartAnalysis() 
 
     Await.ready(system.whenTerminated, Duration.Inf)
   }

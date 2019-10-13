@@ -13,15 +13,16 @@ import akka.actor.Props
 import it.utiu.tapas.base.AbstractPredictorActor
 import it.utiu.tapas.util.Consts
 import org.apache.spark.ml.util.MLReader
+import org.apache.spark.ml.Transformer
 
 object ActivityPredictorActor {
   def props(): Props = Props(new ActivityPredictorActor())
 
 }
 
-class ActivityPredictorActor() extends AbstractPredictorActor[LogisticRegressionModel](Consts.CS_ACTIVITY) {
+class ActivityPredictorActor() extends AbstractPredictorActor(Consts.CS_ACTIVITY) {
 
-  override def doInternalPrediction(msgs: String, spark: SparkSession, model: Model[LogisticRegressionModel]): String = {
+  override def doInternalPrediction(msgs: String, spark: SparkSession, model: Transformer): String = {
     val lrModel = model.asInstanceOf[LogisticRegressionModel]
 
     //cast to List[List[Double]]
@@ -48,5 +49,5 @@ class ActivityPredictorActor() extends AbstractPredictorActor[LogisticRegression
   }
 
   
-  override def getAlgo()= LogisticRegressionModel.read
+//  override def getAlgo()= LogisticRegressionModel.read
 }

@@ -9,30 +9,25 @@ import org.apache.spark.sql.Row
 import it.utiu.tapas.base.AbstractAnalyzerActor.StartAnalysis
 import it.utiu.tapas.base.AbstractAnalyzerActor.AnalysisFinished
 import scala.collection.mutable.ArrayBuffer
-import it.utiu.tapas.base.AbstractAnalyzerActor.AskAnalytics
-import it.utiu.tapas.base.AbstractAnalyzerActor.TellAnalytics
+import akka.actor.ActorRef
 
 object AbstractAnalyzerActor {
   case class StartAnalysis()
-  case class AnalysisFinished()
-  case class AskAnalytics()
-  case class TellAnalytics(strCSV: String)
+  case class AnalysisFinished(strCSV: String)
 }
 
-abstract class AbstractAnalyzerActor(name: String) extends AbstractBaseActor(name) {
-  var strCSV: String = null;  
+abstract class AbstractAnalyzerActor(name: String, feeder: ActorRef) extends AbstractBaseActor(name) {
+    
   
   override def receive: Receive = {
 
     case StartAnalysis() => doAnalysis()
     
-    case AnalysisFinished() =>
+    case AnalysisFinished(strCSV) =>
       log.info("analysis restart waiting...")
       Thread.sleep(60000)
       log.info("restart analysis")
       doAnalysis()
-    
-    case AskAnalytics => sender ! TellAnalytics(strCSV)
   }
 
   //(List[header_col], List[time, List[value]])
@@ -66,13 +61,15 @@ abstract class AbstractAnalyzerActor(name: String) extends AbstractBaseActor(nam
     stats._2.foreach(row=>
       buff.append(row.toSeq.mkString(",")+"\n")
     )
-    log.info("stats computed:\n"+buff)    
-    strCSV = buff.toString
+    log.info("stats computed:\n"+buff)        
     
     //terminate context
     //spark.stop()
 
+    //message to refresh feeder stats data
+    feeder ! AbstractAnalyzerActor.AnalysisFinished(buff.toString)
+    
     //self-message to start a new training
-    self ! AbstractAnalyzerActor.AnalysisFinished()
+    self ! AbstractAnalyzerActor.AnalysisFinished(buff.toString)
   }
 }

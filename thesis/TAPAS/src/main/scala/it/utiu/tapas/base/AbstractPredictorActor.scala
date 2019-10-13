@@ -20,23 +20,24 @@ object AbstractPredictorActor {
 }
 
 
-abstract class AbstractPredictorActor[T <: Model[T]](name: String) extends AbstractBaseActor(name) {
-  var mlModel: Model[T] = null
+abstract class AbstractPredictorActor(name: String) extends AbstractBaseActor(name) {
+  var mlModel: Transformer = null
 
   
   override def receive: Receive = {
     case AskPrediction(msgs: String) =>
-      sender ! TellPrediction(doPrediction(msgs), getInput(msgs))
+      val prediction = doPrediction(msgs)
+      if (prediction != null) sender ! TellPrediction(prediction, getInput(msgs))      
 
     case AbstractTrainerActor.TrainingFinished(model: Transformer) =>
-      mlModel = model.asInstanceOf[Model[T]];
+      mlModel = model.asInstanceOf[Transformer];
 //      println("loaded model " + ML_MODEL_FILE_COPY)
       log.info("reloaded model " + mlModel + " just built")
   }
 
   
-  def doInternalPrediction(msgs: String, spark: SparkSession, model: Model[T]): String
-  def getAlgo(): MLReader[T]
+  def doInternalPrediction(msgs: String, spark: SparkSession, model: Transformer): String
+//  def getAlgo(): Transformer
   def getInput(msg: String): String = msg 
 
   private def doPrediction(msgs: String): String = {
@@ -57,7 +58,7 @@ abstract class AbstractPredictorActor[T <: Model[T]](name: String) extends Abstr
     val sc = spark.sparkContext
     sc.setLogLevel("ERROR")
 
-    if (mlModel == null)  mlModel = loadModelFromDisk().asInstanceOf[Model[T]] //return "ML model not created yet!"
+    if (mlModel == null)  return null //mlModel = loadModelFromDisk().asInstanceOf[Model[T]] //return "ML model not created yet!"
     
     //invoke internal
     val prediction = doInternalPrediction(msgs, spark, mlModel)
@@ -69,13 +70,13 @@ abstract class AbstractPredictorActor[T <: Model[T]](name: String) extends Abstr
   }
   
   
-  private def loadModelFromDisk() : Transformer = {
-      log.info("restoring model " + ML_MODEL_FILE_COPY + " from disk...")
-      //delete old copy-of-model
-      FileUtils.deleteDirectory(new File(ML_MODEL_FILE_COPY))
-      //create a fresh copy-of-model
-      FileUtils.copyDirectory(new File(ML_MODEL_FILE), new File(ML_MODEL_FILE_COPY), true);
-      //load copy-of-model
-      getAlgo().load(ML_MODEL_FILE_COPY)    
-  }  
+//  private def loadModelFromDisk() : Transformer = {
+//      log.info("restoring model " + ML_MODEL_FILE_COPY + " from disk...")
+//      //delete old copy-of-model
+//      FileUtils.deleteDirectory(new File(ML_MODEL_FILE_COPY))
+//      //create a fresh copy-of-model
+//      FileUtils.copyDirectory(new File(ML_MODEL_FILE), new File(ML_MODEL_FILE_COPY), true);
+//      //load copy-of-model
+//      getAlgo().load(ML_MODEL_FILE_COPY)    
+//  }  
 }

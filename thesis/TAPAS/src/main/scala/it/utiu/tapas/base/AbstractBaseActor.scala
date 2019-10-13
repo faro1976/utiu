@@ -34,15 +34,15 @@ abstract class AbstractBaseActor(name: String) extends Actor with ActorLogging {
   val ANALYTICS_OUTPUT_FILE = RT_OUTPUT_PATH + name + "-stats.csv"
   
   //date pattern for csv
-  val tmstFormat = new SimpleDateFormat("yyMMdd hh:mm")
+  val tmstFormat = new SimpleDateFormat("yyMMdd HH:mm")
   
    override def supervisorStrategy = OneForOneStrategy() {
       case _: Exception => SupervisorStrategy.Restart
    }    
   
-  protected def writeFile(file: String, text: String, mode: StandardOpenOption) {
+  protected def writeFile(file: String, text: String, mode: Option[StandardOpenOption]) {
     val path = Paths.get(file)
     if (!Files.exists(path)) Files.createFile(path) 
-    Files.write(path, text.toString.getBytes, mode)    
+    if (mode.isDefined) Files.write(path, text.toString.getBytes, mode.get) else  Files.write(path, text.toString.getBytes)         
   }
 }

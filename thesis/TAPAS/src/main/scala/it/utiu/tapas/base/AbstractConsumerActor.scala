@@ -34,6 +34,7 @@ import akka.actor.Cancellable
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.ExecutionContext.Implicits.global
 import java.text.SimpleDateFormat
+import it.utiu.tapas.base.AbstractStatsFeederActor
 
 
 object AbstractConsumerActor {
@@ -44,16 +45,16 @@ object AbstractConsumerActor {
 }
 
 
-abstract class AbstractConsumerActor(name: String, topic: String, predictor: ActorRef, analyzer: ActorRef, header: String) extends AbstractBaseActor(name) {
+abstract class AbstractConsumerActor(name: String, topic: String, predictor: ActorRef, statsFeeder: ActorRef, header: String) extends AbstractBaseActor(name) {
   var analyzerScheduler:Option[Cancellable] = None
   
   override def receive: Receive = {
     //start consuming message
     case AbstractConsumerActor.StartConsuming() => 
       doConsuming()
-      if (analyzer!=null) {
+      if (statsFeeder!=null) {
         analyzerScheduler = Some(context.system.scheduler.schedule(10 second, 120 second) {        
-          context.actorSelection(analyzer.path) ! AbstractAnalyzerActor.AskAnalytics()
+          statsFeeder ! AbstractStatsFeederActor.AskStats()
         })                      
       }
       
@@ -61,11 +62,11 @@ abstract class AbstractConsumerActor(name: String, topic: String, predictor: Act
     case AbstractPredictorActor.TellPrediction(prediction, input) => 
       log.info("received prediction: " + prediction)
       val txtOut = tmstFormat.format(new Date()) + "," + input + "," + prediction + "\n"
-      writeFile(RT_OUTPUT_FILE, txtOut, StandardOpenOption.APPEND)
+      writeFile(RT_OUTPUT_FILE, txtOut, Some(StandardOpenOption.APPEND))
       
-    case AbstractAnalyzerActor.TellAnalytics(strCSV) =>
+    case AbstractStatsFeederActor.TellStats(strCSV) =>
       if (strCSV != null) {
-        writeFile(ANALYTICS_OUTPUT_FILE, strCSV, StandardOpenOption.APPEND)
+        writeFile(ANALYTICS_OUTPUT_FILE, strCSV, None)
       }      
   }
 

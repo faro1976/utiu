@@ -18,15 +18,16 @@ import com.google.gson.Gson
 import scala.util.parsing.json.JSONObject
 import com.google.gson.JsonObject
 import java.text.SimpleDateFormat
+import org.apache.spark.ml.Transformer
 
 object BTCPredictorActor {
   def props(): Props = Props(new BTCPredictorActor())
 
 }
 
-class BTCPredictorActor() extends AbstractPredictorActor[GBTRegressionModel](Consts.CS_BTC) {
+class BTCPredictorActor() extends AbstractPredictorActor(Consts.CS_BTC) {
 
-  override def doInternalPrediction(msgs: String, spark: SparkSession, model: Model[GBTRegressionModel]): String = {
+  override def doInternalPrediction(msgs: String, spark: SparkSession, model: Transformer): String = {
     val modelGBT = model.asInstanceOf[GBTRegressionModel]
 
     import spark.implicits._ // spark is your SparkSession object
@@ -43,13 +44,13 @@ class BTCPredictorActor() extends AbstractPredictorActor[GBTRegressionModel](Con
   }
 
   
-  override def getAlgo()= GBTRegressionModel.read
+//  override def getAlgo()= GBTRegressionModel.read
   
   override def getInput(line: String): String = {
     val gson = new Gson()
     val jobj = gson.fromJson(line, classOf[JsonObject])
     val since = jobj.getAsJsonObject("context").getAsJsonObject("cache").get("since").getAsString
-    val tSince = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss").parse(since)
+    val tSince = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse(since)
     tmstFormat.format(tSince)
  }
 }

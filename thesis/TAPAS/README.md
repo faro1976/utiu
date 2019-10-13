@@ -73,7 +73,7 @@ aaaa
 ## Pipeline
 The solution is composed of the following phases [components]:
 * ingestion [producer]: collects the raw data files and sends its by message to relative topic of a message broker;
-* routing [consumer]: reads the data from topic and dispatcthes the message to the suitable component, choosing action between save into a distributed file system if the message is a data input and forward request to predictor if the messagge is a prediction request; 
+* routing [consumer]: reads the data from topic and dispatches the message to the suitable component, choosing action between save into a distributed file system if the message is a data input and forward request to predictor if the messagge is a prediction request; 
 * ml training [trainer]: executes a ml training phase reading raw data from a distributed file system, builds a ml model and notifies its predictor transferring to it the fresh model just computed;
 * prediction [predictor]: receives a prediction request and replies to it applying a suitable ml model and making a prediction;
 * analysis [analyzer]: computes statistics on the raw data from a distributed file system and notifies its predictor transferring to it the fresh stastistic data.

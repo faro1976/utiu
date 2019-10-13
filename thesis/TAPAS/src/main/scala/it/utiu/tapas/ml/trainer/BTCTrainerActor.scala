@@ -61,15 +61,15 @@ class BTCTrainerActor extends AbstractTrainerActor(Consts.CS_BTC) {
 //    val df1 = spark.read.json(HDFS_CS_PATH + "*")
 //    val df1 = spark.read.json(HDFS_CS_PATH + "blockchair/*")
         val df1 = spark.read.json(HDFS_CS_PATH + "blockchair/small/*")
-    df1.show
-    df1.printSchema()
+//    df1.show
+//    df1.printSchema()
     import spark.implicits._
     val df2 = df1.select("context.cache.since", "data.transactions_24h", "data.difficulty", "data.volume_24h", "data.mempool_transactions", "data.mempool_size", "data.mempool_tps", "data.mempool_total_fee_usd", "data.average_transaction_fee_24h", "data.nodes", "data.inflation_usd_24h", "data.average_transaction_fee_usd_24h", "data.market_price_usd", "data.next_difficulty_estimate", "data.suggested_transaction_fee_per_byte_sat")
 
     val dfHourlyWindow = df2
       .groupBy(window(df2.col("since"), "1 hour"))
       .agg(avg("market_price_usd").as("hourly_average_price"))
-    dfHourlyWindow.show()
+//    dfHourlyWindow.show()
     //shift end to next minute adding 60 secs
     //    val df3 = df2.withColumn("end", date_format(to_date(timeUdf(col("since")), "yyyy-MM-dd HH:mm:ss"), "yyyy-MM-dd HH:00:00"))
     //reset minutes and seconds, then shift to next hour
@@ -78,20 +78,20 @@ class BTCTrainerActor extends AbstractTrainerActor(Consts.CS_BTC) {
     val df3_1 = df2.withColumn("next_hour", date_trunc("HOUR", col("since") + expr("INTERVAL 1 HOURS")))
     //and at the end join by window start time
     //      .join(dfHourlyWindow, col("next_hour") === date_trunc("HOUR",col("window.start")))
-    df3_1.show()
+//    df3_1.show()
     //    val df3_2 = df2.withColumn("prev_hour", date_trunc("HOUR", col("since"))).select(col("since"), col("prev_hour"), col("hourly_average_price").as("prev_avg_price"))
     val df3_2 = df3_1.withColumn("prev_hour", date_trunc("HOUR", col("since"))) //.select(col("since"), col("prev_hour"))
     //and at the end join by window start time
     //      .join(dfHourlyWindow, col("prev_hour") === date_trunc("HOUR",col("window.end")))
     //    val df3 = df2.join(df3_1, "since").join(df3_2, "since")
-    df3_2.show()
+//    df3_2.show()
 
     val df3_3 = df3_2.join(dfHourlyWindow, col("next_hour") === date_trunc("HOUR", col("window.start")))
       .withColumnRenamed("hourly_average_price", "next_avg_price").withColumnRenamed("window", "next_window")
       .join(dfHourlyWindow, col("prev_hour") === date_trunc("HOUR", col("window.end")))
       .withColumnRenamed("hourly_average_price", "prev_avg_price").withColumnRenamed("window", "prev_window")
     val df3 = df3_3
-    df3.show()
+//    df3.show()
 
     //define model features
 //    val assembler = new VectorAssembler().setInputCols(Array("transactions_24h", "difficulty", "mempool_transactions", "average_transaction_fee_24h", "nodes", "inflation_usd_24h", "suggested_transaction_fee_per_byte_sat", "prev_avg_price", "next_avg_price")).setOutputCol("features")
@@ -212,7 +212,7 @@ class BTCTrainerActor extends AbstractTrainerActor(Consts.CS_BTC) {
     val mae = evaluator.evaluate(predictions)
     log.info(s"$algo - Mean absolute error: $mae")   
     
-    val str = tmstFormat.format(new Date()) + "," + algo + "," + r2
-    writeFile(RT_OUTPUT_PATH + Consts.CS_BTC + "-regression-eval.csv", str, StandardOpenOption.APPEND)
+    val str = tmstFormat.format(new Date()) + "," + algo + "," + r2 + "\n"
+    writeFile(RT_OUTPUT_PATH + Consts.CS_BTC + "-regression-eval.csv", str, Some(StandardOpenOption.APPEND))
   }
 }
