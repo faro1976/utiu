@@ -20,6 +20,25 @@ object AbstractTrainerActor {
 
 
 abstract class AbstractTrainerActor[T <: Model[T]](name: String) extends AbstractBaseActor(name) {
+    
+  //Spark Configuration
+  val conf = new SparkConf()
+    .setAppName(name + "-training")
+    .setMaster(SPARK_URL_TRAINING)
+    .set("fs.hdfs.impl", "org.apache.hadoop.hdfs.DistributedFileSystem")
+    .set("fs.file.impl","org.apache.hadoop.fs.LocalFileSystem")
+  
+  //Spark Session
+  val spark = SparkSession.builder
+    .config(conf)
+    .getOrCreate()
+  
+  //Spark Context
+  val sc = spark.sparkContext
+  sc.setLogLevel("ERROR")
+
+  
+  
   override def receive: Receive = {
 
     case StartTraining() =>
@@ -27,7 +46,7 @@ abstract class AbstractTrainerActor[T <: Model[T]](name: String) extends Abstrac
 
     case TrainingFinished(model: Model[T]) =>
       log.info("training restart waiting...")
-      Thread.sleep(60000)
+      Thread.sleep(AbstractBaseActor.LOOP_DELAY)
       log.info("restart training")
       doTraining()
   }
@@ -35,24 +54,8 @@ abstract class AbstractTrainerActor[T <: Model[T]](name: String) extends Abstrac
   def doInternalTraining(sc: SparkSession): Transformer
   
   private def doTraining() {
-    log.info("start training for "+name+"...")
+    log.info("start training...")
     
-    //Spark Configuration
-    val conf = new SparkConf()
-      .setAppName(name + "-training")
-      .setMaster(AbstractBaseActor.SPARK_URL_TRAINING)
-      .set("fs.hdfs.impl", "org.apache.hadoop.hdfs.DistributedFileSystem")
-      .set("fs.file.impl","org.apache.hadoop.fs.LocalFileSystem")
-    
-    //Spark Session
-    val spark = SparkSession.builder
-      .config(conf)
-      .getOrCreate()
-    
-    //Spark Context
-    val sc = spark.sparkContext
-    sc.setLogLevel("ERROR")
-
     //invoke internal
     val ml = doInternalTraining(spark)
     

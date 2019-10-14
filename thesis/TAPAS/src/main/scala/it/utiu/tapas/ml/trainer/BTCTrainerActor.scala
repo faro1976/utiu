@@ -58,9 +58,9 @@ class BTCTrainerActor extends AbstractTrainerActor(Consts.CS_BTC) {
     import org.apache.spark.sql.functions._
 
     //load dataset from csv inferring schema
-    val df1 = spark.read.json(HDFS_CS_PATH + "*")
+//    val df1 = spark.read.json(HDFS_CS_PATH + "*")
 //    val df1 = spark.read.json(HDFS_CS_PATH + "blockchair/*")
-//        val df1 = spark.read.json(HDFS_CS_PATH + "blockchair/small/*")
+        val df1 = spark.read.json(HDFS_CS_PATH + "blockchair/small/*")
 //    df1.show
 //    df1.printSchema()
     import spark.implicits._
@@ -107,8 +107,10 @@ class BTCTrainerActor extends AbstractTrainerActor(Consts.CS_BTC) {
     //define training and test sets randomly splitted
     val splitSeed = new Random().nextInt()
     val Array(trainingData, testData) = df4.randomSplit(Array(0.7, 0.3), splitSeed)
-    println("training count:" + trainingData.count())
-    println("test count:" + testData.count())
+    val trainCount = trainingData.count()
+    val testCount = testData.count()
+    println("training count:" + trainCount)
+    println("test count:" + testCount)
 
     
     //LinearRegression
@@ -127,7 +129,7 @@ class BTCTrainerActor extends AbstractTrainerActor(Consts.CS_BTC) {
     //validate model by test set
     val predictionsLR = modelLR.transform(testData)
     
-    evalRegression("LinearRegression", predictionsLR)
+    evalRegression("LinearRegression", predictionsLR, (trainCount, testCount))
 
     
     //DecisionTreeRegression
@@ -142,7 +144,7 @@ class BTCTrainerActor extends AbstractTrainerActor(Consts.CS_BTC) {
     //validate model by test set
     val predictionsDTR = modelDTR.transform(testData)
     
-    evalRegression("DecisionTreeRegression", predictionsDTR)
+    evalRegression("DecisionTreeRegression", predictionsDTR, (trainCount, testCount))
 
     
     //RandomForestRegressor
@@ -157,7 +159,7 @@ class BTCTrainerActor extends AbstractTrainerActor(Consts.CS_BTC) {
     //validate model by test set
     val predictionsRFR = modelRFR.transform(testData)
     
-    evalRegression("RandomForestRegressor", predictionsRFR)
+    evalRegression("RandomForestRegressor", predictionsRFR, (trainCount, testCount))
     
     
     //GBT
@@ -183,13 +185,13 @@ class BTCTrainerActor extends AbstractTrainerActor(Consts.CS_BTC) {
 //      (prediction, point.getAs[Double]("label"))
 //    }
     
-    evalRegression("GBTRegressor", predictionsGBT)
+    evalRegression("GBTRegressor", predictionsGBT, (trainCount, testCount))
     
     
     modelGBT
   }
   
-  private def evalRegression(algo: String, predictions: DataFrame) {
+  private def evalRegression(algo: String, predictions: DataFrame, rows: (Long, Long)) {
     
     //print ml evaluation
     val evaluator = new RegressionEvaluator()
@@ -212,7 +214,7 @@ class BTCTrainerActor extends AbstractTrainerActor(Consts.CS_BTC) {
     val mae = evaluator.evaluate(predictions)
     log.info(s"$algo - Mean absolute error: $mae")   
     
-    val str = tmstFormat.format(new Date()) + "," + algo + "," + r2 + "\n"
+    val str = tmstFormat.format(new Date()) + "," + algo + "," + r2 + rows._1 + "," + rows._2 + "\n"
     writeFile(RT_OUTPUT_PATH + Consts.CS_BTC + "-regression-eval.csv", str, Some(StandardOpenOption.APPEND))
   }
 }

@@ -28,6 +28,11 @@ sleep 2
 sbin/start-master.sh --port 8002 --webui-port 8012
 sleep 2
 sbin/start-slave.sh localhost:8002
+export SPARK_IDENT_STRING=spark3
+sleep 2
+sbin/start-master.sh --port 8003 --webui-port 8013
+sleep 2
+sbin/start-slave.sh localhost:8003
 
 sleep 5
 jps

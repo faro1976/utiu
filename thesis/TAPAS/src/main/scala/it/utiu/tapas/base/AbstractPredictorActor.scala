@@ -22,6 +22,22 @@ object AbstractPredictorActor {
 
 abstract class AbstractPredictorActor(name: String) extends AbstractBaseActor(name) {
   var mlModel: Transformer = null
+  
+  //Spark Configuration
+  val conf = new SparkConf().setAppName(name + "-prediction")
+    .setMaster(SPARK_URL_PREDICTION)
+    .set("fs.hdfs.impl", "org.apache.hadoop.hdfs.DistributedFileSystem")
+    .set("fs.file.impl","org.apache.hadoop.fs.LocalFileSystem")      
+
+  //Spark Session 
+  val spark = SparkSession.builder
+    .config(conf)
+    .getOrCreate()
+    
+  //Spark Context
+  val sc = spark.sparkContext
+  sc.setLogLevel("ERROR")
+  
 
   
   override def receive: Receive = {
@@ -41,22 +57,8 @@ abstract class AbstractPredictorActor(name: String) extends AbstractBaseActor(na
   def getInput(msg: String): String = msg 
 
   private def doPrediction(msgs: String): String = {
-    log.info("prediction requested")
+    log.info("start prediction...")
     
-    //Spark Configuration
-    val conf = new SparkConf().setAppName(name + "-prediction")
-      .setMaster(AbstractBaseActor.SPARK_URL_PREDICTION)
-      .set("fs.hdfs.impl", "org.apache.hadoop.hdfs.DistributedFileSystem")
-      .set("fs.file.impl","org.apache.hadoop.fs.LocalFileSystem")      
-
-    //Spark Session 
-    val spark = SparkSession.builder
-      .config(conf)
-      .getOrCreate()
-      
-    //Spark Context
-    val sc = spark.sparkContext
-    sc.setLogLevel("ERROR")
 
     if (mlModel == null)  return null //mlModel = loadModelFromDisk().asInstanceOf[Model[T]] //return "ML model not created yet!"
     

@@ -46,12 +46,12 @@ Dataset retrieved from regular polling of Blockchair REST APIs (https://github.c
 * Pipeline
 The TAPAS bootstrap starts actors btc trainer, consumer (passing predictor and feeder), producer and analyzer  
 Every 1 minute the btc-poller read data from Blockchair REST API and write data to a file into the local file system
-btc-producer notices the file changed by a file system watcher and put a message input to a kafka topic btc
-btc-consumer extracts input message from the kafka topic and depending on the input type it routes to btc-predictor and/or btc-feeder
-btc-predictor receive the input message and computes prediction using a fresh model built obtained from btc-trainer and returns the predicted value
-btc-feeder returns the fresh data analytics obtained from btc-analyzer
-btc-trainer starts every 1 minute a new machine learning model building and at finishing notifies btc-predictor transferring the lm model just built
-btc-analyzer start every 1 minute a new data analytics computation and at a finishing notifies btc-feeder transferring the statistical data just computed   
+producer notices the file changed by a file system watcher and put a message input to a kafka topic
+consumer extracts input message from the kafka topic and depending on the input type it routes to predictor and/or feeder
+predictor receive the input message and computes prediction using a fresh model built obtained from trainer and returns the predicted value
+feeder returns the fresh data analytics obtained from analyzer
+trainer starts every 1 minute a new machine learning model building and at finishing notifies predictor transferring the lm model just built, it saves the evaluation metrics for the regression/classification algorithms adopted choosing the best suitable  
+analyzer start every 1 minute a new data analytics computation and at a finishing notifies feeder transferring the statistical data just computed   
 
 * Activity detection
 

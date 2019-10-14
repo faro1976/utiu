@@ -11,6 +11,9 @@ sleep 2
 export SPARK_IDENT_STRING=spark2
 sbin/stop-slave.sh localhost:8002
 sbin/stop-master.sh --port 8002 --webui-port 8012
+export SPARK_IDENT_STRING=spark3
+sbin/stop-slave.sh localhost:8003
+sbin/stop-master.sh --port 8003 --webui-port 8013
 
 cd $FWK_PATH/hadoop-2.9.2
 sbin/stop-dfs.sh

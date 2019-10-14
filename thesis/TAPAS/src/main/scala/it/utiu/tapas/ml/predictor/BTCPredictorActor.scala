@@ -19,6 +19,8 @@ import scala.util.parsing.json.JSONObject
 import com.google.gson.JsonObject
 import java.text.SimpleDateFormat
 import org.apache.spark.ml.Transformer
+import java.time.ZoneId
+import java.util.Date
 
 object BTCPredictorActor {
   def props(): Props = Props(new BTCPredictorActor())
@@ -49,8 +51,10 @@ class BTCPredictorActor() extends AbstractPredictorActor(Consts.CS_BTC) {
   override def getInput(line: String): String = {
     val gson = new Gson()
     val jobj = gson.fromJson(line, classOf[JsonObject])
-    val since = jobj.getAsJsonObject("context").getAsJsonObject("cache").get("since").getAsString
+    val since = jobj.getAsJsonObject("context").getAsJsonObject("cache").get("since").getAsString    
     val tSince = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse(since)
-    tmstFormat.format(tSince)
+    //shift to the next hour interval
+    val tSinceNextHour = Date.from(tSince.toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime().plusHours(1).atZone( ZoneId.systemDefault()).toInstant());
+    new SimpleDateFormat("yyyy-MM-dd HH").format(tSinceNextHour)
  }
 }

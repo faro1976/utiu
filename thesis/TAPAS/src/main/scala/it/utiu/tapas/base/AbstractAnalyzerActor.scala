@@ -10,6 +10,7 @@ import it.utiu.tapas.base.AbstractAnalyzerActor.StartAnalysis
 import it.utiu.tapas.base.AbstractAnalyzerActor.AnalysisFinished
 import scala.collection.mutable.ArrayBuffer
 import akka.actor.ActorRef
+import akka.actor.AbstractActor
 
 object AbstractAnalyzerActor {
   case class StartAnalysis()
@@ -17,6 +18,21 @@ object AbstractAnalyzerActor {
 }
 
 abstract class AbstractAnalyzerActor(name: String) extends AbstractBaseActor(name) {
+  //Spark Configuration
+  val conf = new SparkConf()
+    .setAppName(name + "-analysis")
+    .setMaster(SPARK_URL_ANALYSIS)
+    .set("fs.hdfs.impl", "org.apache.hadoop.hdfs.DistributedFileSystem")
+    .set("fs.file.impl","org.apache.hadoop.fs.LocalFileSystem")
+    
+  //Spark Session  
+  val spark = SparkSession.builder
+    .config(conf)
+    .getOrCreate()
+    
+  //Spark Context  
+  val sc = spark.sparkContext
+  sc.setLogLevel("ERROR")
     
   
   override def receive: Receive = {
@@ -25,7 +41,7 @@ abstract class AbstractAnalyzerActor(name: String) extends AbstractBaseActor(nam
     
     case AnalysisFinished(strCSV) =>
       log.info("analysis restart waiting...")
-      Thread.sleep(60000)
+      Thread.sleep(AbstractBaseActor.LOOP_DELAY)
       log.info("restart analysis")
       doAnalysis()
   }
@@ -35,21 +51,6 @@ abstract class AbstractAnalyzerActor(name: String) extends AbstractBaseActor(nam
 
   private def doAnalysis() {
     log.info("start analysis...")
-    //Spark Configuration
-    val conf = new SparkConf()
-      .setAppName(name + "-training")
-      .setMaster(AbstractBaseActor.SPARK_URL_TRAINING)
-      .set("fs.hdfs.impl", "org.apache.hadoop.hdfs.DistributedFileSystem")
-      .set("fs.file.impl","org.apache.hadoop.fs.LocalFileSystem")
-      
-    //Spark Session  
-    val spark = SparkSession.builder
-      .config(conf)
-      .getOrCreate()
-      
-    //Spark Context  
-    val sc = spark.sparkContext
-    sc.setLogLevel("ERROR")
 
     //invoke internal
     val stats = doInternalAnalysis(spark)
