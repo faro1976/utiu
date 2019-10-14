@@ -50,8 +50,8 @@ producer notices the file changed by a file system watcher and put a message inp
 consumer extracts input message from the kafka topic and depending on the input type it routes to predictor and/or feeder
 predictor receive the input message and computes prediction using a fresh model built obtained from trainer and returns the predicted value
 feeder returns the fresh data analytics obtained from analyzer
-trainer starts every 1 minute a new machine learning model building and at finishing notifies predictor transferring the lm model just built, it saves the evaluation metrics for the regression/classification algorithms adopted choosing the best suitable  
-analyzer start every 1 minute a new data analytics computation and at a finishing notifies feeder transferring the statistical data just computed   
+trainer starts every 5 minute a new machine learning model building and at finishing notifies predictor transferring the lm model just built, it saves the evaluation metrics for the regression/classification algorithms adopted choosing the best suitable  
+analyzer start every 5 minute a new data analytics computation and at a finishing notifies feeder transferring the statistical data just computed   
 
 * Activity detection
 
