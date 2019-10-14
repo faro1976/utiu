@@ -61,13 +61,17 @@ class AbstractProducerActor(name: String, topic: String) extends AbstractBaseAct
       .withBootstrapServers(AbstractBaseActor.KAFKA_BOOT_SVR)
 
     val file = scala.io.Source.fromFile(filePath)
+    log.info("file generated")
     val source: Source[String, NotUsed] = Source(file.getLines().toIterable.to[collection.immutable.Iterable])
 
     val done = source
       .map(_.toString)
       .map { elem =>
+            log.info("inside")
         new ProducerRecord[Array[Byte], String](topic, elem)
       }
       .runWith(Producer.plainSink(producerSettings))
+      
+    log.info("exiting.....")      
   }
 }
