@@ -10,6 +10,18 @@ import it.utiu.tapas.base.AbstractPredictorActor.AskPrediction
 import it.utiu.tapas.base.AbstractPredictorActor.TellPrediction
 import org.apache.spark.ml.util.MLWritable
 import org.apache.spark.ml.Transformer
+import org.apache.spark.ml.Pipeline
+import org.apache.spark.ml.util.MLReadable
+import org.apache.spark.ml.PipelineModel
+import java.nio.file.Files
+import java.nio.file.Paths
+import org.apache.spark.ml.classification.LogisticRegressionModel
+import org.apache.spark.ml.regression.LinearRegressionModel
+import org.apache.spark.ml.regression.DecisionTreeRegressionModel
+import org.apache.spark.ml.regression.RandomForestRegressionModel
+import org.apache.spark.ml.regression.GBTRegressionModel
+import org.apache.spark.ml.classification.DecisionTreeClassificationModel
+import org.apache.spark.ml.classification.RandomForestClassificationModel
 
 
 object AbstractPredictorActor {
@@ -47,20 +59,21 @@ abstract class AbstractPredictorActor(name: String) extends AbstractBaseActor(na
 
     case AbstractTrainerActor.TrainingFinished(model: Transformer) =>
       mlModel = model.asInstanceOf[Transformer];
-//      println("loaded model " + ML_MODEL_FILE_COPY)
       log.info("reloaded model " + mlModel + " just built")
   }
 
   
   def doInternalPrediction(msgs: String, spark: SparkSession, model: Transformer): String
-//  def getAlgo(): Transformer
+  
   def getInput(msg: String): String = msg 
 
   private def doPrediction(msgs: String): String = {
     log.info("start prediction...")
-    
 
-    if (mlModel == null)  return null //mlModel = loadModelFromDisk().asInstanceOf[Model[T]] //return "ML model not created yet!"
+    if (mlModel == null) {
+      if (!Files.exists(Paths.get(ML_MODEL_FILE))) return null
+      mlModel = loadModelFromDisk()
+    } 
     
     //invoke internal
     val prediction = doInternalPrediction(msgs, spark, mlModel)
@@ -71,14 +84,24 @@ abstract class AbstractPredictorActor(name: String) extends AbstractBaseActor(na
     return prediction
   }
   
-  
-//  private def loadModelFromDisk() : Transformer = {
-//      log.info("restoring model " + ML_MODEL_FILE_COPY + " from disk...")
-//      //delete old copy-of-model
-//      FileUtils.deleteDirectory(new File(ML_MODEL_FILE_COPY))
-//      //create a fresh copy-of-model
-//      FileUtils.copyDirectory(new File(ML_MODEL_FILE), new File(ML_MODEL_FILE_COPY), true);
-//      //load copy-of-model
-//      getAlgo().load(ML_MODEL_FILE_COPY)    
-//  }  
+  private def loadModelFromDisk() : Transformer = {
+      log.info("restoring model " + ML_MODEL_FILE_COPY + " from disk...")
+      //delete old copy-of-model
+      FileUtils.deleteDirectory(new File(ML_MODEL_FILE_COPY))
+      //create a fresh copy-of-model
+      FileUtils.copyDirectory(new File(ML_MODEL_FILE), new File(ML_MODEL_FILE_COPY), true);
+      //load copy-of-model
+//      getAlgo().load(ML_MODEL_FILE_COPY)
+      val algo = scala.io.Source.fromFile(ML_MODEL_FILE+".algo").getLines().next()
+      algo match {
+        case "org.apache.spark.ml.regression.LinearRegressionModel" => LinearRegressionModel.read.load(ML_MODEL_FILE_COPY)
+        case "org.apache.spark.ml.regression.DecisionTreeRegressorModel" =>  DecisionTreeRegressionModel.read.load(ML_MODEL_FILE_COPY)
+        case "org.apache.spark.ml.regression.RandomForestRegressionModel" =>  RandomForestRegressionModel.read.load(ML_MODEL_FILE_COPY)
+        case "org.apache.spark.ml.regression.GBTRegressionModel" =>  GBTRegressionModel.read.load(ML_MODEL_FILE_COPY)
+        case "org.apache.spark.ml.classification.LogisticRegressionModel" =>  LogisticRegressionModel.read.load(ML_MODEL_FILE_COPY)
+        case "org.apache.spark.ml.classification.DecisionTreeClassificationModel" =>  DecisionTreeClassificationModel.read.load(ML_MODEL_FILE_COPY)        
+        case "org.apache.spark.ml.classification.RandomForestClassificationModel" =>  RandomForestClassificationModel.read.load(ML_MODEL_FILE_COPY)
+      }
+//      PipelineModel.load(ML_MODEL_FILE_COPY)
+  }  
 }

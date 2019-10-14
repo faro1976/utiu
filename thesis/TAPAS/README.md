@@ -36,14 +36,7 @@ in order to start:
 * Apache Spark - distributed parallel computing
 
 
-## Case studies
-
-* Bitcoin statistics and prediction
-
-Bitcoin price prediction and general statistics about Blockchain and Bitcoin network (regression, ? features): regression techniques to predict Bitcoin price observing a few features inside Blockchain and Bitcoin peer-to-peer network.
-Dataset retrieved from regular polling of Blockchair REST APIs (https://github.com/Blockchair/Blockchair.Support/blob/master/API.md).
-
-* Pipeline
+## Application pipeline
 The TAPAS bootstrap starts actors btc trainer, consumer (passing predictor and feeder), producer and analyzer  
 Every 1 minute the btc-poller read data from Blockchair REST API and write data to a file into the local file system
 producer notices the file changed by a file system watcher and put a message input to a kafka topic
@@ -52,6 +45,14 @@ predictor receive the input message and computes prediction using a fresh model 
 feeder returns the fresh data analytics obtained from analyzer
 trainer starts every 5 minute a new machine learning model building and at finishing notifies predictor transferring the lm model just built, it saves the evaluation metrics for the regression/classification algorithms adopted choosing the best suitable  
 analyzer start every 5 minute a new data analytics computation and at a finishing notifies feeder transferring the statistical data just computed   
+
+
+## Case studies
+
+* Bitcoin statistics and prediction
+
+Bitcoin price prediction and general statistics about Blockchain and Bitcoin network (regression, ? features): regression techniques to predict Bitcoin price observing a few features inside Blockchain and Bitcoin peer-to-peer network.
+Dataset retrieved from regular polling of Blockchair REST APIs (https://github.com/Blockchair/Blockchair.Support/blob/master/API.md).
 
 * Activity detection
 

@@ -5,7 +5,6 @@ import scala.collection.mutable.ListBuffer
 import scala.reflect.api.materializeTypeTag
 
 import org.apache.spark.ml.Model
-import org.apache.spark.ml.classification.LogisticRegressionModel
 import org.apache.spark.ml.feature.VectorAssembler
 import org.apache.spark.sql.SparkSession
 
@@ -23,8 +22,6 @@ object WinePredictorActor {
 class WinePredictorActor() extends AbstractPredictorActor(Consts.CS_WINE) {
 
   override def doInternalPrediction(msgs: String, spark: SparkSession, model: Transformer): String = {
-    val lrModel = model.asInstanceOf[LogisticRegressionModel]
-
     //cast to List[List[Double]]
     val buffInput = new ListBuffer[List[Double]]()
     //    msgs.foreach(m=>buffInput.append(m.split(",").map(_.).toList))
@@ -57,7 +54,7 @@ class WinePredictorActor() extends AbstractPredictorActor(Consts.CS_WINE) {
     val ds = assembler.transform(sentenceData)
     ds.show()
 
-    val predictions = lrModel.transform(ds)
+    val predictions = model.transform(ds)
     println("prediction from loaded model...")
     predictions.show()
     val ret = predictions.select("predictedClass").collect().map(_(0)).toList

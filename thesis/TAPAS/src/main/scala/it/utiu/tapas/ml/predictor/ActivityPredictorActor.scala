@@ -5,7 +5,6 @@ import scala.collection.mutable.ListBuffer
 import scala.reflect.api.materializeTypeTag
 
 import org.apache.spark.ml.Model
-import org.apache.spark.ml.classification.LogisticRegressionModel
 import org.apache.spark.ml.feature.VectorAssembler
 import org.apache.spark.sql.SparkSession
 
@@ -23,8 +22,6 @@ object ActivityPredictorActor {
 class ActivityPredictorActor() extends AbstractPredictorActor(Consts.CS_ACTIVITY) {
 
   override def doInternalPrediction(msgs: String, spark: SparkSession, model: Transformer): String = {
-    val lrModel = model.asInstanceOf[LogisticRegressionModel]
-
     //cast to List[List[Double]]
     val buffInput = new ListBuffer[List[Double]]()
     //    msgs.foreach(m=>buffInput.append(m.split(",").map(_.).toList))
@@ -40,7 +37,7 @@ class ActivityPredictorActor() extends AbstractPredictorActor(Consts.CS_ACTIVITY
     val ds = assembler.transform(sentenceData)
     ds.show()
 
-    val predictions = lrModel.transform(ds)
+    val predictions = model.transform(ds)
     log.info("activity prediction received from predictor actor:")
     predictions.show()
     val ret = predictions.select("prediction").collect().map(_(0)).toList

@@ -5,7 +5,6 @@ import scala.collection.mutable.ListBuffer
 import scala.reflect.api.materializeTypeTag
 
 import org.apache.spark.ml.Model
-import org.apache.spark.ml.classification.LogisticRegressionModel
 import org.apache.spark.ml.feature.VectorAssembler
 import org.apache.spark.sql.SparkSession
 
@@ -13,7 +12,6 @@ import akka.actor.Props
 import it.utiu.tapas.base.AbstractPredictorActor
 import it.utiu.tapas.util.Consts
 import org.apache.spark.ml.util.MLReader
-import org.apache.spark.ml.regression.GBTRegressionModel
 import com.google.gson.Gson
 import scala.util.parsing.json.JSONObject
 import com.google.gson.JsonObject
@@ -30,7 +28,7 @@ object BTCPredictorActor {
 class BTCPredictorActor() extends AbstractPredictorActor(Consts.CS_BTC) {
 
   override def doInternalPrediction(msgs: String, spark: SparkSession, model: Transformer): String = {
-    val modelGBT = model.asInstanceOf[GBTRegressionModel]
+//    val modelGBT = model.asInstanceOf[GBTRegressionModel]
 
     import spark.implicits._ // spark is your SparkSession object
     val df1 = spark.read.json(Seq(msgs).toDS)
@@ -39,7 +37,7 @@ class BTCPredictorActor() extends AbstractPredictorActor(Consts.CS_BTC) {
       .setHandleInvalid("skip")
     val df3 = assembler.transform(df2)      
     
-    val predictions = modelGBT.transform(df3)
+    val predictions = model.transform(df3)
     predictions.show()
     val ret = predictions.select("prediction").collect().map(_(0)).toList
     return ret.asInstanceOf[List[Double]](0).toString()

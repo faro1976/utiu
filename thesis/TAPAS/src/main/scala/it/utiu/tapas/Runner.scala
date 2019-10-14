@@ -80,17 +80,17 @@ class Runner(system: ActorSystem, cs: String) {
     }
 
     //start actors
-    //trainer
-    trainerRef ! AbstractTrainerActor.StartTraining()
-    Thread.sleep(2000)
-    //conumser
+//    //trainer
+//    trainerRef ! AbstractTrainerActor.StartTraining()
+//    Thread.sleep(2000)
+    //consumer
     consumerRef ! AbstractConsumerActor.StartConsuming()
     Thread.sleep(2000)
     //producer
     producerRef ! AbstractProducerActor.StartProducing()
     Thread.sleep(2000)
-    //stats data feeder (if supported)
-    if (analyzerRef != null) analyzerRef ! AbstractAnalyzerActor.StartAnalysis() 
+//    //stats data feeder (if supported)
+//    if (analyzerRef != null) analyzerRef ! AbstractAnalyzerActor.StartAnalysis() 
 
     Await.ready(system.whenTerminated, Duration.Inf)
   }

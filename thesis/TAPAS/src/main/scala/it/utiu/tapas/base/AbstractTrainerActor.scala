@@ -9,6 +9,7 @@ import org.apache.spark.ml.Model
 import org.apache.spark.ml.Transformer
 import java.text.SimpleDateFormat
 import org.apache.hadoop.hdfs.DistributedFileSystem
+import org.apache.spark.ml.Pipeline
 
 
 object AbstractTrainerActor {
@@ -62,13 +63,16 @@ abstract class AbstractTrainerActor[T <: Model[T]](name: String) extends Abstrac
     //save ml model
     log.info("saving ml model into " + ML_MODEL_FILE + "...")
     ml.asInstanceOf[MLWritable].write.overwrite().save(ML_MODEL_FILE)
+    writeFile(ML_MODEL_FILE+".algo", ml.getClass.getName, None)
+//    val pipeline = new Pipeline().setStages(Array(ml))
+//    pipeline.getStages(0).write.overwrite.save(ML_MODEL_FILE)
     log.info("saved ml model into " + ML_MODEL_FILE + "...")
 
     //terminate context
     //spark.stop()
 
     //notify predictor forcing model refresh
-    context.actorSelection("/user/predictor-" + name /*+"*"*/ ) ! TrainingFinished(ml)
+    context.actorSelection("/user/predictor-" + name) ! TrainingFinished(ml)
 
     //self-message to start a new training
     self ! AbstractTrainerActor.TrainingFinished(ml)
