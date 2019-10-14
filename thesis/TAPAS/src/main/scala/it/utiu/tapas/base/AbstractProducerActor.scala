@@ -62,6 +62,8 @@ class AbstractProducerActor(name: String, topic: String) extends AbstractBaseAct
 
     val file = scala.io.Source.fromFile(filePath)
     log.info("file generated")
+    for (l <- file.getLines().toIterable)
+      println("l:"+l)
     val source: Source[String, NotUsed] = Source(file.getLines().toIterable.to[collection.immutable.Iterable])
     
     val done = source
