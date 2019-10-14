@@ -42,6 +42,7 @@ import org.apache.spark.ml.regression.DecisionTreeRegressor
 import org.apache.spark.ml.regression.RandomForestRegressor
 import java.nio.file.StandardOpenOption
 import java.util.Date
+import scala.collection.mutable.ArrayBuffer
 
 object BTCTrainerActor {
   def props(): Props =
@@ -59,7 +60,6 @@ class BTCTrainerActor extends AbstractTrainerActor(Consts.CS_BTC) {
 
     //load dataset from csv inferring schema
     val df1 = spark.read.json(HDFS_CS_PATH + "*")
-//    val df1 = spark.read.json(HDFS_CS_PATH + "blockchair/*")
 //        val df1 = spark.read.json(HDFS_CS_PATH + "blockchair/small/*")
 //    df1.show
 //    df1.printSchema()
@@ -129,8 +129,10 @@ class BTCTrainerActor extends AbstractTrainerActor(Consts.CS_BTC) {
     //validate model by test set
     val predictionsLR = modelLR.transform(testData)
     
-    evalRegression("LinearRegression", predictionsLR, (trainCount, testCount))
-
+    val evals = ArrayBuffer[(Transformer, Double)]()
+    
+    val evalLR = evalRegression("LinearRegression", predictionsLR, (trainCount, testCount))
+    evals.append((modelLR, evalLR))
     
     //DecisionTreeRegression
     //build regression model
@@ -144,8 +146,8 @@ class BTCTrainerActor extends AbstractTrainerActor(Consts.CS_BTC) {
     //validate model by test set
     val predictionsDTR = modelDTR.transform(testData)
     
-    evalRegression("DecisionTreeRegression", predictionsDTR, (trainCount, testCount))
-
+    val evalDTR = evalRegression("DecisionTreeRegression", predictionsDTR, (trainCount, testCount))
+    evals.append((modelDTR, evalDTR))
     
     //RandomForestRegressor
     //build regression model
@@ -159,8 +161,8 @@ class BTCTrainerActor extends AbstractTrainerActor(Consts.CS_BTC) {
     //validate model by test set
     val predictionsRFR = modelRFR.transform(testData)
     
-    evalRegression("RandomForestRegressor", predictionsRFR, (trainCount, testCount))
-    
+    val evalRFR = evalRegression("RandomForestRegressor", predictionsRFR, (trainCount, testCount))
+    evals.append((modelRFR, evalRFR))
     
     //GBT
     //build regression model
@@ -185,13 +187,14 @@ class BTCTrainerActor extends AbstractTrainerActor(Consts.CS_BTC) {
 //      (prediction, point.getAs[Double]("label"))
 //    }
     
-    evalRegression("GBTRegressor", predictionsGBT, (trainCount, testCount))
+    val evalGBT = evalRegression("GBTRegressor", predictionsGBT, (trainCount, testCount))
+    evals.append((modelGBT, evalGBT))
     
-    
-    modelGBT
+    //return best fit model by r2 evaluator
+    evals.maxBy(_._2)._1
   }
   
-  private def evalRegression(algo: String, predictions: DataFrame, rows: (Long, Long)) {
+  private def evalRegression(algo: String, predictions: DataFrame, rows: (Long, Long)): Double = {
     
     //print ml evaluation
     val evaluator = new RegressionEvaluator()
@@ -214,7 +217,9 @@ class BTCTrainerActor extends AbstractTrainerActor(Consts.CS_BTC) {
     val mae = evaluator.evaluate(predictions)
     log.info(s"$algo - Mean absolute error: $mae")   
     
-    val str = tmstFormat.format(new Date()) + "," + algo + "," + r2 + rows._1 + "," + rows._2 + "\n"
+    val str = tmstFormat.format(new Date()) + "," + algo + "," + r2 + "," + rows._1 + "," + rows._2 + "\n"
     writeFile(RT_OUTPUT_PATH + Consts.CS_BTC + "-regression-eval.csv", str, Some(StandardOpenOption.APPEND))
+    
+    r2
   }
 }

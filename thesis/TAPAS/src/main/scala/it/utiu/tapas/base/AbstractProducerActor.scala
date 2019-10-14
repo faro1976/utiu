@@ -54,7 +54,7 @@ class AbstractProducerActor(name: String, topic: String) extends AbstractBaseAct
   }
 
   private def elabFile(filePath: String) {
-    log.info("process file "+filePath)
+    log.info("produce from file "+filePath)
     implicit val materializer: ActorMaterializer = ActorMaterializer()
     implicit val executionContext: ExecutionContext = context.system.dispatcher
     val producerSettings = ProducerSettings(context.system, new ByteArraySerializer, new StringSerializer)

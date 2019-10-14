@@ -20,6 +20,7 @@ import org.apache.spark.sql._
 import org.apache.spark.sql.functions._
 import org.apache.spark.ml.classification.DecisionTreeClassifier
 import org.apache.spark.ml.classification.RandomForestClassifier
+import scala.collection.mutable.ArrayBuffer
 
 
 object ActivityTrainerActor {
@@ -48,13 +49,16 @@ class ActivityTrainerActor extends AbstractTrainerActor(Consts.CS_ACTIVITY) {
     println("training count:" + trainCount)
     println("test count:" + testCount)
 
+    val evals = ArrayBuffer[(Transformer, Double)]()
+    
     //LOGISTIC REGRESSION CLASSIFIER
     val lr = new LogisticRegression().setMaxIter(3).setRegParam(0.3).setElasticNetParam(0.8)
       .setLabelCol("label")
       .setFeaturesCol("features")
     val modelLR = lr.fit(trainingData)
     val predictionsLR = modelLR.transform(testData)
-    calculateMetrics("LogisticRegression", predictionsLR, (trainCount, testCount))
+    val evalLR = calculateMetrics("LogisticRegression", predictionsLR, (trainCount, testCount))
+    evals.append((modelLR, evalLR))
 
     //DECISION TREES CLASSIFIER
     val dt = new DecisionTreeClassifier()
@@ -62,7 +66,8 @@ class ActivityTrainerActor extends AbstractTrainerActor(Consts.CS_ACTIVITY) {
       .setFeaturesCol("features")
     val modelDT = dt.fit(trainingData)
     val predictionsDT = modelDT.transform(testData)
-    calculateMetrics("DecisionTreeClassifier", predictionsDT, (trainCount, testCount))
+    val evalDT = calculateMetrics("DecisionTreeClassifier", predictionsDT, (trainCount, testCount))
+    evals.append((modelDT, evalDT))
 
     //RANDOM FOREST CLASSIFIER
     val rf = new RandomForestClassifier()
@@ -71,14 +76,16 @@ class ActivityTrainerActor extends AbstractTrainerActor(Consts.CS_ACTIVITY) {
       .setNumTrees(10)
     val modelRF = rf.fit(trainingData)
     val predictionsRF = modelRF.transform(testData)
-    calculateMetrics("RandomForestClassifier", predictionsRF, (trainCount, testCount))
+    val evalRF = calculateMetrics("RandomForestClassifier", predictionsRF, (trainCount, testCount))
+    evals.append((modelRF, evalRF))    
     
-    modelRF
+    //return best fit model by accuracy evaluator
+    evals.maxBy(_._2)._1
   }
 
   
   //funzione generica per calcolo indicatori dei predittori
-  def calculateMetrics(algo: String, predictions: DataFrame, rows: (Long, Long)) = {
+  def calculateMetrics(algo: String, predictions: DataFrame, rows: (Long, Long)): Double = {
     import predictions.sparkSession.implicits._
     val lp = predictions.select("label", "prediction")
     val counttotal = predictions.count()
@@ -97,8 +104,9 @@ class ActivityTrainerActor extends AbstractTrainerActor(Consts.CS_ACTIVITY) {
       .setMetricName("accuracy")
     val accuracy = evaluator.evaluate(predictions)
     
-    val str = tmstFormat.format(new Date()) + "," + algo + "," + (accuracy +","+counttotal+","+correct+","+wrong+","+trueP+","+falseP+","+trueN+","+falseN+","+ratioWrong+","+ratioCorrect) + rows._1 + "," + rows._2 + "\n"
+    val str = tmstFormat.format(new Date()) + "," + algo + "," + (accuracy +","+counttotal+","+correct+","+wrong+","+trueP+","+falseP+","+trueN+","+falseN+","+ratioWrong+","+ratioCorrect) + "," + rows._1 + "," + rows._2 + "\n"
     writeFile(RT_OUTPUT_PATH + Consts.CS_BTC + "-classification-eval.csv", str, Some(StandardOpenOption.APPEND))
+    accuracy
   }
   
 }
