@@ -80,7 +80,9 @@ class AbstractProducerActor(name: String, topic: String) extends AbstractBaseAct
 //      })
 //    producer.close()
     
-    Source(fileTmp.getLines().toIterable.to[collection.immutable.Iterable]).map(l=>println("line:"+l.toString))
+    for (line<-fileTmp.getLines()){
+      println("line:"+line)
+    }
       
     val source: Source[String, NotUsed] = Source(file.getLines().toIterable.to[collection.immutable.Iterable])
     
