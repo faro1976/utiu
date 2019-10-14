@@ -17,6 +17,10 @@ import java.nio.file.Paths
 import java.nio.file.StandardWatchEventKinds._
 import java.nio.file.WatchEvent
 import java.nio.file.Path
+import java.nio.file.Files
+import org.apache.kafka.clients.producer.KafkaProducer
+import scala.util.Properties
+import java.util.Properties
 
 object AbstractProducerActor {
   //start producing message
@@ -60,19 +64,28 @@ class AbstractProducerActor(name: String, topic: String) extends AbstractBaseAct
     val producerSettings = ProducerSettings(context.system, new ByteArraySerializer, new StringSerializer)
       .withBootstrapServers(AbstractBaseActor.KAFKA_BOOT_SVR)
 
+    val fileTmp = scala.io.Source.fromFile(filePath)
     val file = scala.io.Source.fromFile(filePath)
-    log.info("file generated")
-    log.info("1"+filePath)
-    log.info("2"+file.size)
-    log.info("3"+file.getLines().size)
-    for (l <- file.getLines().toIterable)
-      println("l:"+l)
+    
+
+//         val props = new Properties()
+//    props.put("bootstrap.servers", "localhost:9092")
+//    props.put("key.serializer", "org.apache.kafka.common.serialization.StringSerializer")
+//    props.put("value.serializer", "org.apache.kafka.common.serialization.StringSerializer")
+//   val producer = new KafkaProducer[String, String](props)
+//      val lines = Files.lines(Paths.get(filePath))
+//      lines.map(l:String=> 
+//        val record = new ProducerRecord[String, String](topic, "key", "value")
+//        producer.send(record)        
+//      })
+//    producer.close()
+    
+    Source(fileTmp.getLines().toIterable.to[collection.immutable.Iterable]).map(l=>println("line:"+l.toString))
+      
     val source: Source[String, NotUsed] = Source(file.getLines().toIterable.to[collection.immutable.Iterable])
     
     val done = source
-      .map(s=>{
-        println("rob"+s.toString())
-        s.toString})
+      .map(_.toString)
       .map { elem =>
             log.info("inside")
         new ProducerRecord[Array[Byte], String](topic, elem)
