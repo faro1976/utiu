@@ -131,4 +131,4 @@ The it.utiu.tapas.base package contains abstraction level of TAPAS:
 * AbstractStatsFeederActor: handles AskStats and TellStats messages, receives from analyzer fresh statistical data and when sollicited return its.
 
 
-![alt text](img/arch.jpeg "TAPAS architecture")
+![alt text](img/arch.001.jpeg "TAPAS architecture")
