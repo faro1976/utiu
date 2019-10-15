@@ -43,19 +43,20 @@ import org.apache.spark.ml.regression.RandomForestRegressor
 import java.nio.file.StandardOpenOption
 import java.util.Date
 import scala.collection.mutable.ArrayBuffer
+import it.utiu.tapas.base.AbstractRegressionTrainerActor
 
 object BTCTrainerActor {
   def props(): Props =
     Props(new BTCTrainerActor())
 }
 
-class BTCTrainerActor extends AbstractTrainerActor(Consts.CS_BTC) {
+class BTCTrainerActor extends AbstractRegressionTrainerActor(Consts.CS_BTC) {
   def printWindow(windowDF: DataFrame, aggCol: String) = {
     windowDF.sort("window.start").
       select("window.start", "window.end", s"$aggCol").
       show(truncate = false)
   }
-  override def doInternalTraining(spark: SparkSession): Transformer = {
+  override def doInternalTraining(spark: SparkSession): List[(String, Transformer, DataFrame, (Long, Long))] = {
     import org.apache.spark.sql.functions._
 
     //load dataset from csv inferring schema
@@ -112,6 +113,8 @@ class BTCTrainerActor extends AbstractTrainerActor(Consts.CS_BTC) {
     println("training count:" + trainCount)
     println("test count:" + testCount)
 
+    //(modelName, model, predictions, (train count, test count))
+    val evals = ArrayBuffer[(String, Transformer, DataFrame, (Long, Long))]()
     
     //LinearRegression
     //build regression model
@@ -128,11 +131,8 @@ class BTCTrainerActor extends AbstractTrainerActor(Consts.CS_BTC) {
     
     //validate model by test set
     val predictionsLR = modelLR.transform(testData)
-    
-    val evals = ArrayBuffer[(Transformer, Double)]()
-    
-    val evalLR = evalRegression("LinearRegression", predictionsLR, (trainCount, testCount))
-    evals.append((modelLR, evalLR))
+        
+    evals.append(("LinearRegression", modelLR, predictionsLR, (trainCount, testCount)))
     
     //DecisionTreeRegression
     //build regression model
@@ -146,8 +146,7 @@ class BTCTrainerActor extends AbstractTrainerActor(Consts.CS_BTC) {
     //validate model by test set
     val predictionsDTR = modelDTR.transform(testData)
     
-    val evalDTR = evalRegression("DecisionTreeRegression", predictionsDTR, (trainCount, testCount))
-    evals.append((modelDTR, evalDTR))
+    evals.append(("DecisionTreeRegression", modelDTR, predictionsDTR, (trainCount, testCount)))
     
     //RandomForestRegressor
     //build regression model
@@ -161,8 +160,7 @@ class BTCTrainerActor extends AbstractTrainerActor(Consts.CS_BTC) {
     //validate model by test set
     val predictionsRFR = modelRFR.transform(testData)
     
-    val evalRFR = evalRegression("RandomForestRegressor", predictionsRFR, (trainCount, testCount))
-    evals.append((modelRFR, evalRFR))
+    evals.append(("RandomForestRegressor", modelRFR, predictionsRFR, (trainCount, testCount)))
     
     //GBT
     //build regression model
@@ -187,39 +185,10 @@ class BTCTrainerActor extends AbstractTrainerActor(Consts.CS_BTC) {
 //      (prediction, point.getAs[Double]("label"))
 //    }
     
-    val evalGBT = evalRegression("GBTRegressor", predictionsGBT, (trainCount, testCount))
-    evals.append((modelGBT, evalGBT))
+    evals.append(("GBTRegressor", modelGBT, predictionsGBT, (trainCount, testCount)))
     
-    //return best fit model by r2 evaluator
-    evals.maxBy(_._2)._1
+    evals.toList
   }
   
-  private def evalRegression(algo: String, predictions: DataFrame, rows: (Long, Long)): Double = {
-    
-    //print ml evaluation
-    val evaluator = new RegressionEvaluator()
-      .setLabelCol("label")
-      .setPredictionCol("prediction")
-      .setMetricName("rmse")
-    val rmse = evaluator.evaluate(predictions)
-    log.info(s"$algo - Root mean squared error: $rmse")
-
-    //print ml metrics
-    evaluator.setMetricName("mse")
-    val mse = evaluator.evaluate(predictions)
-    log.info(s"$algo - Mean squared error: $mse")
-
-    evaluator.setMetricName("r2")
-    val r2 = evaluator.evaluate(predictions)
-    log.info(s"$algo - r2: $r2")
-
-    evaluator.setMetricName("mae")
-    val mae = evaluator.evaluate(predictions)
-    log.info(s"$algo - Mean absolute error: $mae")   
-    
-    val str = tmstFormat.format(new Date()) + "," + algo + "," + r2 + "," + rows._1 + "," + rows._2 + "\n"
-    writeFile(RT_OUTPUT_PATH + Consts.CS_BTC + "-regression-eval.csv", str, Some(StandardOpenOption.APPEND))
-    
-    r2
-  }
+  
 }

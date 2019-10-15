@@ -16,7 +16,7 @@ object AbstractBaseActor {
   val HDFS_URL = "hdfs://localhost:9000/"
   val KAFKA_BOOT_SVR = "localhost:9092"
   val KAFKA_GROUP_ID = "group1"
-  val LOOP_DELAY = 300000
+  val LOOP_DELAY = 600000
 }
 
 abstract class AbstractBaseActor(name: String) extends Actor with ActorLogging {

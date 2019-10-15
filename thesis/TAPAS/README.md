@@ -24,6 +24,12 @@ cd thesis/TAPAS
 mvn clean package
 ``` 
 
+* run btc-poller  - only for btc case study
+```shell
+bin/start-btc-poller
+``` 
+
+
 ## Start all external framework daemons
 execute
 ```shell
@@ -37,14 +43,26 @@ in order to start:
 
 
 ## Application pipeline
-The TAPAS bootstrap starts actors btc trainer, consumer (passing predictor and feeder), producer and analyzer  
-Every 1 minute the btc-poller read data from Blockchair REST API and write data to a file into the local file system
-producer notices the file changed by a file system watcher and put a message input to a kafka topic
-consumer extracts input message from the kafka topic and depending on the input type it routes to predictor and/or feeder
-predictor receive the input message and computes prediction using a fresh model built obtained from trainer and returns the predicted value
-feeder returns the fresh data analytics obtained from analyzer
-trainer starts every 5 minute a new machine learning model building and at finishing notifies predictor transferring the lm model just built, it saves the evaluation metrics for the regression/classification algorithms adopted choosing the best suitable  
-analyzer start every 5 minute a new data analytics computation and at a finishing notifies feeder transferring the statistical data just computed   
+The TAPAS bootstrap starts actors trainer, consumer (passing predictor and feeder), producer and analyzer.
+
+The trainer starts every 10 minutes the building of a set of machine learning models and at the finishing notifies the predictor transferring the lm model just built dinamically choosing the fittest model between regression/classification Spark implementations, it saves the evaluation metrics for the regression/classification algorithms adopted and stores metrics into rt/[case_study]/output/[case_study]-[{regression,classification}]-eval.csv.
+
+The analyzer starts every 10 minutes a new data analytics computation and at the finishing notifies feeder transferring the statistical data just computed .  
+
+Every 1 minute the btc-poller reads data from Blockchair REST API and writes data to a file into the local file system rt/[case_study]/input/.
+
+The producer notices the file changed by a file system watcher and puts a message input to a kafka topic.
+
+The consumer extracts input message from the kafka topic and depending on the input type it routes to predictor and/or feeder.
+
+The predictor receives the input message and computes prediction using a fresh model built from trainer and returns the predicted value to the consumer.
+
+The consumer reads prediction and stores it to rt/[case_study]/output/[case_study]-prediction.csv.
+
+The feeder returns the fresh data analytics obtained from analyzer.
+
+The consumer reads data analytics and stores it to rt/[case_study]/output/[case_study]-stats.csv.
+
 
 
 ## Case studies
@@ -65,19 +83,19 @@ Wine cultivars classification based on a chemical analysis (classification, 13 f
 Dataset from https://archive.ics.uci.edu/ml/datasets/Wine
 
 
-## Execution
-Run producer simulation in case study:
+## TAPAS Execution
+To run TAPAS with a case study:
 
 * case study Bitcoin
 
 ```shell
-aaaa
+java -Dconfig.file=cfg/application.conf -cp target/TAPAS-0.0.1-SNAPSHOT-jar-with-dependencies.jar it.utiu.tapas.Runner btc
 ``` 
 
 * case study Activity detection
 
 ```shell
-aaaa
+java -Dconfig.file=cfg/application.conf -cp target/TAPAS-0.0.1-SNAPSHOT-jar-with-dependencies.jar it.utiu.tapas.Runner activity
 ``` 
 
 
@@ -91,4 +109,13 @@ The solution is composed of the following phases [components]:
 
 
 ## Abstract implementation
-TODO ROB: describe abstraction, classes and roles above
+The it.utiu.tapas.base package contains abstraction level of TAPAS:
+* AbstractBaseActor: shared constants, defines supervisor strategy, provides file writing function
+* AbstractTrainerActor: starts a Spark training session, handles StartTraining and TrainingFinished messages, invokes ml model building, selects fittest model by metrics, notifies predictors passing the fresh model
+* AbstractRegressionTrainerActor: implements the fittest regression model algo
+* AbstractClassificationTrainerActor: implements the fittest classification model algo
+* AbstractPredictorActor: starts a Spark prediction session, handles AskPrediction and TellPrediction messages, invokes specific prediction function
+* AbstractConsumerActor: starts a Kafka consuming session, receives message from topic and dispatches to predictor and/or save data input when reaches the buffer size limit
+* AbstractProducerActor: starts a Kafka producing session, listens on input files path and sends new data to topic
+* AbstractAnalyzerActor: starts a Spark analyzing session, handles StartAnalysis and AnalysisFinished messages, invokes specific analysis function and at the finishing save result into a csv file
+* AbstractStatsFeederActor: handles AskStats and TellStats messages, receives from analyzer fresh statistical data and when sollicited return its.

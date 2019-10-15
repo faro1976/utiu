@@ -10,7 +10,8 @@ import org.apache.spark.ml.Transformer
 import java.text.SimpleDateFormat
 import org.apache.hadoop.hdfs.DistributedFileSystem
 import org.apache.spark.ml.Pipeline
-
+import org.apache.spark.sql.{ DataFrame, SparkSession }
+import scala.collection.mutable.ArrayBuffer
 
 object AbstractTrainerActor {
   //start training message
@@ -20,7 +21,7 @@ object AbstractTrainerActor {
 }
 
 
-abstract class AbstractTrainerActor[T <: Model[T]](name: String) extends AbstractBaseActor(name) {
+abstract class AbstractTrainerActor(name: String) extends AbstractBaseActor(name) {
     
   //Spark Configuration
   val conf = new SparkConf()
@@ -39,31 +40,40 @@ abstract class AbstractTrainerActor[T <: Model[T]](name: String) extends Abstrac
   sc.setLogLevel("ERROR")
 
   
+  def calculateMetrics(algo: String, predictions: DataFrame, rows: (Long, Long)): Double
   
   override def receive: Receive = {
 
     case StartTraining() =>
       doTraining()
 
-    case TrainingFinished(model: Model[T]) =>
+    case TrainingFinished(model: Transformer) =>
       log.info("training restart waiting...")
       Thread.sleep(AbstractBaseActor.LOOP_DELAY)
       log.info("restart training")
       doTraining()
   }
   
-  def doInternalTraining(sc: SparkSession): Transformer
+  def doInternalTraining(sc: SparkSession): List[(String, Transformer, DataFrame, (Long, Long))]
   
   private def doTraining() {
     log.info("start training...")
     
     //invoke internal
-    val ml = doInternalTraining(spark)
+    val evals = doInternalTraining(spark)
+    
+    //choose fittest model by r2/accuracy evaluator on regression/classification
+    val metrics = ArrayBuffer[(Transformer, Double)]()
+    for (eval <- evals) {
+      val value = calculateMetrics(eval._1, eval._3, eval._4)
+      metrics.append((eval._2, value))
+    }
+    val fittest = metrics.maxBy(_._2)._1
     
     //save ml model
     log.info("saving ml model into " + ML_MODEL_FILE + "...")
-    ml.asInstanceOf[MLWritable].write.overwrite().save(ML_MODEL_FILE)
-    writeFile(ML_MODEL_FILE+".algo", ml.getClass.getName, None)
+    fittest.asInstanceOf[MLWritable].write.overwrite().save(ML_MODEL_FILE)
+    writeFile(ML_MODEL_FILE+".algo", fittest.getClass.getName, None)
 //    val pipeline = new Pipeline().setStages(Array(ml))
 //    pipeline.getStages(0).write.overwrite.save(ML_MODEL_FILE)
     log.info("saved ml model into " + ML_MODEL_FILE + "...")
@@ -72,10 +82,10 @@ abstract class AbstractTrainerActor[T <: Model[T]](name: String) extends Abstrac
     //spark.stop()
 
     //notify predictor forcing model refresh
-    context.actorSelection("/user/predictor-" + name) ! TrainingFinished(ml)
+    context.actorSelection("/user/predictor-" + name) ! TrainingFinished(fittest)
 
     //self-message to start a new training
-    self ! AbstractTrainerActor.TrainingFinished(ml)
+    self ! AbstractTrainerActor.TrainingFinished(fittest)
   }
 
   

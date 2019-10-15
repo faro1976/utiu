@@ -21,6 +21,7 @@ import org.apache.spark.sql.functions._
 import org.apache.spark.ml.classification.DecisionTreeClassifier
 import org.apache.spark.ml.classification.RandomForestClassifier
 import scala.collection.mutable.ArrayBuffer
+import it.utiu.tapas.base.AbstractClassificationTrainerActor
 
 
 object ActivityTrainerActor {
@@ -28,9 +29,9 @@ object ActivityTrainerActor {
     Props(new ActivityTrainerActor())
 }
 
-class ActivityTrainerActor extends AbstractTrainerActor(Consts.CS_ACTIVITY) {
+class ActivityTrainerActor extends AbstractClassificationTrainerActor(Consts.CS_ACTIVITY) {
 
-  override def doInternalTraining(spark: SparkSession): Transformer = {
+  override def doInternalTraining(spark: SparkSession): List[(String, Transformer, DataFrame, (Long, Long))] = {
     import org.apache.spark.sql.functions._
     
     //load dataset from csv inferring schema from header
@@ -49,7 +50,8 @@ class ActivityTrainerActor extends AbstractTrainerActor(Consts.CS_ACTIVITY) {
     println("training count:" + trainCount)
     println("test count:" + testCount)
 
-    val evals = ArrayBuffer[(Transformer, Double)]()
+    //(modelName, model, predictions, (train count, test count))
+    val evals = ArrayBuffer[(String, Transformer, DataFrame, (Long, Long))]()
     
     //LOGISTIC REGRESSION CLASSIFIER
     val lr = new LogisticRegression().setMaxIter(3).setRegParam(0.3).setElasticNetParam(0.8)
@@ -57,8 +59,7 @@ class ActivityTrainerActor extends AbstractTrainerActor(Consts.CS_ACTIVITY) {
       .setFeaturesCol("features")
     val modelLR = lr.fit(trainingData)
     val predictionsLR = modelLR.transform(testData)
-    val evalLR = calculateMetrics("LogisticRegression", predictionsLR, (trainCount, testCount))
-    evals.append((modelLR, evalLR))
+    evals.append(("LogisticRegression", modelLR, predictionsLR, (trainCount, testCount)))    
 
     //DECISION TREES CLASSIFIER
     val dt = new DecisionTreeClassifier()
@@ -66,9 +67,8 @@ class ActivityTrainerActor extends AbstractTrainerActor(Consts.CS_ACTIVITY) {
       .setFeaturesCol("features")
     val modelDT = dt.fit(trainingData)
     val predictionsDT = modelDT.transform(testData)
-    val evalDT = calculateMetrics("DecisionTreeClassifier", predictionsDT, (trainCount, testCount))
-    evals.append((modelDT, evalDT))
-
+    evals.append(("DecisionTreeClassifier", modelDT, predictionsDT, (trainCount, testCount)))
+    
     //RANDOM FOREST CLASSIFIER
     val rf = new RandomForestClassifier()
       .setLabelCol("label")
@@ -76,37 +76,13 @@ class ActivityTrainerActor extends AbstractTrainerActor(Consts.CS_ACTIVITY) {
       .setNumTrees(10)
     val modelRF = rf.fit(trainingData)
     val predictionsRF = modelRF.transform(testData)
-    val evalRF = calculateMetrics("RandomForestClassifier", predictionsRF, (trainCount, testCount))
-    evals.append((modelRF, evalRF))    
+    evals.append(("RandomForestClassifier", modelRF, predictionsRF, (trainCount, testCount)))
     
-    //return best fit model by accuracy evaluator
-    evals.maxBy(_._2)._1
+    evals.toList
   }
 
   
   //funzione generica per calcolo indicatori dei predittori
-  def calculateMetrics(algo: String, predictions: DataFrame, rows: (Long, Long)): Double = {
-    import predictions.sparkSession.implicits._
-    val lp = predictions.select("label", "prediction")
-    val counttotal = predictions.count()
-    val correct = lp.filter($"label" === $"prediction").count()
-    val wrong = lp.filter(not($"label" === $"prediction")).count()
-    val trueP = lp.filter($"prediction" === 1.0).filter($"label" === $"prediction").count()
-    val falseP = lp.filter($"prediction" === 1.0).filter(not($"label" === $"prediction")).count()
-    val trueN = lp.filter($"prediction" === 0.0).filter($"label" === $"prediction").count()
-    val falseN = lp.filter($"prediction" === 0.0).filter(not($"label" === $"prediction")).count()
-    val ratioWrong = wrong.toDouble / counttotal.toDouble
-    val ratioCorrect = correct.toDouble / counttotal.toDouble
-    
-    val evaluator = new MulticlassClassificationEvaluator()
-      .setLabelCol("label")
-      .setPredictionCol("prediction")
-      .setMetricName("accuracy")
-    val accuracy = evaluator.evaluate(predictions)
-    
-    val str = tmstFormat.format(new Date()) + "," + algo + "," + (accuracy +","+counttotal+","+correct+","+wrong+","+trueP+","+falseP+","+trueN+","+falseN+","+ratioWrong+","+ratioCorrect) + "," + rows._1 + "," + rows._2 + "\n"
-    writeFile(RT_OUTPUT_PATH + Consts.CS_BTC + "-classification-eval.csv", str, Some(StandardOpenOption.APPEND))
-    accuracy
-  }
+
   
 }

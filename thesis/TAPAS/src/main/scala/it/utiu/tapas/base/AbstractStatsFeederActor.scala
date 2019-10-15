@@ -18,7 +18,7 @@ object AbstractStatsFeederActor {
 }
 
 
-abstract class AbstractStatsFeederActor[T <: Model[T]](name: String) extends AbstractBaseActor(name) {
+abstract class AbstractStatsFeederActor(name: String) extends AbstractBaseActor(name) {
   var strCSV: String = null;
 
   

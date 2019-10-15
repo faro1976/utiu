@@ -22,6 +22,9 @@ import org.apache.spark.ml.linalg.Matrix
 import org.apache.spark.ml.feature.VectorAssembler
 import java.nio.file.StandardOpenOption
 import akka.actor.ActorRef
+import org.apache.spark.sql.types.Decimal
+import org.apache.spark.sql.types.DataTypes
+import org.apache.spark.sql.types.DecimalType
 
 object BTCAnalyzerActor {
   def props(): Props = Props(new BTCAnalyzerActor())
@@ -31,8 +34,8 @@ object BTCAnalyzerActor {
 class BTCAnalyzerActor() extends AbstractAnalyzerActor(Consts.CS_BTC) {
   override def doInternalAnalysis(spark: SparkSession): (Array[String], scala.collection.immutable.List[Row]) = {
         
-    val df1 = spark.read.json(HDFS_CS_PATH + "*")
-//        val df1 = spark.read.json(HDFS_CS_PATH + "blockchair/small/*")
+//    val df1 = spark.read.json(HDFS_CS_PATH + "*")
+        val df1 = spark.read.json(HDFS_CS_PATH + "blockchair/small/*")
     df1.show
     df1.printSchema()
     import spark.implicits._
@@ -74,14 +77,18 @@ class BTCAnalyzerActor() extends AbstractAnalyzerActor(Consts.CS_BTC) {
     //instant and last24h values, compute average
     val df5 = df4.groupBy("datehour_only").agg(mean("difficulty").as("avgDifficulty"), mean("nodes").as("avgNodes"), mean("mempool_transactions").as("avgMempoolTxs"), mean("market_price_usd").as("avgPriceUSD")
         , mean("transactions_24h").as("avgTx24h"), mean("volume_24h").as("avgVolume24h"), mean("average_transaction_fee_24h").as("avgTxFee24h"), mean("inflation_usd_24h").as("avgInflatUSD24h"), mean("next_avg_price").as("avgNextAvgPrice"))
-    df5.show()
-    val ret = df5.sort("datehour_only")
+    val df6 = df5.withColumn("avgDifficulty", col("avgDifficulty").cast(DecimalType(25, 4))).withColumn("avgNodes", col("avgNodes").cast(DecimalType(14, 4))).withColumn("avgMempoolTxs", col("avgMempoolTxs").cast(DecimalType(14, 4)))
+        .withColumn("avgPriceUSD", col("avgPriceUSD").cast(DecimalType(14, 4))).withColumn("avgTx24h", col("avgTx24h").cast(DecimalType(14, 4))).withColumn("avgVolume24h", col("avgVolume24h").cast(DecimalType(25, 4)))
+        .withColumn("avgTxFee24h", col("avgTxFee24h").cast(DecimalType(14, 4))).withColumn("avgInflatUSD24h", col("avgInflatUSD24h").cast(DecimalType(14, 4))).withColumn("avgNextAvgPrice", col("avgNextAvgPrice").cast(DecimalType(14, 4)))
+        
+    df6.show()
+    val ret = df6.sort("datehour_only")
  
     //compute correlation matrix   
     val assembler = new VectorAssembler().setInputCols(Array("transactions_24h", "difficulty", "volume_24h", "mempool_transactions", "mempool_size", "mempool_tps", "mempool_total_fee_usd", "average_transaction_fee_24h", "nodes", "inflation_usd_24h", "average_transaction_fee_usd_24h", "market_price_usd", "next_difficulty_estimate", "suggested_transaction_fee_per_byte_sat")).setOutputCol("features")
       .setHandleInvalid("skip")
-    val df6 = assembler.transform(df2)    
-    computeCorrelationMatrix(df6)
+    val df7 = assembler.transform(df2)    
+    computeCorrelationMatrix(df7)
     
     (ret.columns, ret.collectAsList().asScala.toList)        
   }
