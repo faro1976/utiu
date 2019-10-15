@@ -41,6 +41,16 @@ in order to start:
 * Apache HDFS - distributed file system
 * Apache Spark - distributed parallel computing
 
+create kafka topic with command
+```shell
+bin/kafka-topics.sh --create --bootstrap-server localhost:9092 --replication-factor 1 --partitions 1 --topic [{btc,activity}]
+```
+
+load input data into HDFS
+```shell
+bin/hadoop dfs -mkdir /[{btc,activity}]
+bin/hadoop put -put [intpu_path] /[{btc,activity}]
+```
 
 ## Application pipeline
 The TAPAS bootstrap starts actors trainer, consumer (passing predictor and feeder), producer and analyzer.

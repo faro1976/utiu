@@ -33,6 +33,7 @@ class WineTrainerActor extends AbstractClassificationTrainerActor(Consts.CS_WINE
 
     //definisco le feature e le aggiungo come colonna "features"
     val assembler = new VectorAssembler().setInputCols(Array("Alcohol", "Malic", "Ash", "Alcalinity", "Magnesium", "phenols", "Flavanoids", "Nonflavanoid", "Proanthocyanins", "Color", "Hue", "OD280", "Proline")).setOutputCol("features")
+      .setHandleInvalid("skip")
     val df2 = assembler.transform(df1);
 
     //generazione casuale del seed per generare dataset train/test differenti ad ogni esecuzione

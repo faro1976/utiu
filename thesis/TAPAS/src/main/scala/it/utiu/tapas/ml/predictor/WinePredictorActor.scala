@@ -57,7 +57,7 @@ class WinePredictorActor() extends AbstractPredictorActor(Consts.CS_WINE) {
     val predictions = model.transform(ds)
     println("prediction from loaded model...")
     predictions.show()
-    val ret = predictions.select("predictedClass").collect().map(_(0)).toList
+    val ret = predictions.select("prediction").collect().map(_(0)).toList
 
     return ret.asInstanceOf[List[Double]](0).toString()
   }

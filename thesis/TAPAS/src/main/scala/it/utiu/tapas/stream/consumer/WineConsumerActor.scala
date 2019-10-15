@@ -12,5 +12,5 @@ object WineConsumerActor {
 }
 
 class WineConsumerActor(predictor: ActorRef, analyzer: ActorRef) extends AbstractConsumerActor(Consts.CS_WINE, Consts.TOPIC_WINE, predictor, analyzer, WineConsumerActor.header) {
- override def isPredictionRequest(row: String) : Boolean = row.split(",").size == (ActivityConsumerActor.COLS_NUM-1)
+ override def isPredictionRequest(row: String) : Boolean = (row.split(",").size == 13)
 }
