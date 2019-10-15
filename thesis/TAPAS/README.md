@@ -129,3 +129,6 @@ The it.utiu.tapas.base package contains abstraction level of TAPAS:
 * AbstractProducerActor: starts a Kafka producing session, listens on input files path and sends new data to topic
 * AbstractAnalyzerActor: starts a Spark analyzing session, handles StartAnalysis and AnalysisFinished messages, invokes specific analysis function and at the finishing save result into a csv file
 * AbstractStatsFeederActor: handles AskStats and TellStats messages, receives from analyzer fresh statistical data and when sollicited return its.
+
+
+![alt text](img/arch.jpeg "TAPAS architecture")
