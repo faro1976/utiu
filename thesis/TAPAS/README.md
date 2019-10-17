@@ -2,7 +2,7 @@
 
 
 ## Overview
-A framework to execute machine learning and data analytics tasks supported by actor model and in a timely fashion.
+TAPAS is a framework to execute machine learning and data analytics tasks supported by actor model and in a timely fashion.
 Based on Akka toolkit following actor model, implemented by Scala programming language, it adopts Apache Spark to compute parallel distributed analysis and Spark MLlib to build and execute regression and classification models, Apache Kafka to decouple the layers of producer and consumer, HDFS for distributed stored and processing of big data.
 
 
