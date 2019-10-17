@@ -3,7 +3,7 @@
 
 ## Overview
 A framework to execute machine learning and data analytics tasks supported by actor model and in a timely fashion.
-Based on Akka toolkit following actor model, implemented by Scala programming language, it adopts Apache Spark to compute parallel distributed analysis, Apache Kafka to decouple the layers of producer and consumer, HDFS for distributed stored and processing of big data.
+Based on Akka toolkit following actor model, implemented by Scala programming language, it adopts Apache Spark to compute parallel distributed analysis and Spark MLlib to build and execute regression and classification models, Apache Kafka to decouple the layers of producer and consumer, HDFS for distributed stored and processing of big data.
 
 
 ## Installation
@@ -46,7 +46,7 @@ create kafka topic with command
 bin/kafka-topics.sh --create --bootstrap-server localhost:9092 --replication-factor 1 --partitions 1 --topic [{btc,activity}]
 ```
 
-load input data into HDFS
+create directory and load input data into HDFS
 ```shell
 bin/hadoop dfs -mkdir /[{btc,activity}]
 bin/hadoop put -put [intpu_path] /[{btc,activity}]
@@ -55,11 +55,11 @@ bin/hadoop put -put [intpu_path] /[{btc,activity}]
 ## Application pipeline
 The TAPAS bootstrap starts actors trainer, consumer (passing predictor and feeder), producer and analyzer.
 
-The trainer starts every 10 minutes the building of a set of machine learning models and at the finishing notifies the predictor transferring the lm model just built dinamically choosing the fittest model between regression/classification Spark implementations, it saves the evaluation metrics for the regression/classification algorithms adopted and stores metrics into rt/[case_study]/output/[case_study]-[{regression,classification}]-eval.csv.
+The trainer starts every X minutes the building of a set of machine learning models and at the finishing notifies the predictor transferring the ML model just built dinamically choosing the fittest model between regression/classification Spark algorithm implementations, it saves the evaluation metrics for the regression/classification algorithms adopted and stores metrics into rt/[case_study]/output/[case_study]-[{regression,classification}]-eval.csv.
 
-The analyzer starts every 10 minutes a new data analytics computation and at the finishing notifies feeder transferring the statistical data just computed .  
+The analyzer starts every Y minutes a new data analytics computation and at the finishing notifies feeder transferring the statistical data just computed .  
 
-Every 1 minute the btc-poller reads data from Blockchair REST API and writes data to a file into the local file system rt/[case_study]/input/.
+Every Z minutes the btc-poller reads data from Blockchair REST API and writes data to a file into the local file system rt/[case_study]/input/.
 
 The producer notices the file changed by a file system watcher and puts a message input to a kafka topic.
 
@@ -79,12 +79,12 @@ The consumer reads data analytics and stores it to rt/[case_study]/output/[case_
 
 * Bitcoin statistics and prediction
 
-Bitcoin price prediction and general statistics about Blockchain and Bitcoin network (regression, ? features): regression techniques to predict Bitcoin price observing a few features inside Blockchain and Bitcoin peer-to-peer network.
+Bitcoin price prediction and general statistics about Blockchain and Bitcoin network: regression techniques to predict Bitcoin price observing a set of features inside Blockchain and Bitcoin peer-to-peer network, adopting time window to predict the average price of Bitcoin in the next hour.
 Dataset retrieved from regular polling of Blockchair REST APIs (https://github.com/Blockchair/Blockchair.Support/blob/master/API.md).
 
 * Activity detection
 
-Activity recognition of older people by wearable sensors (classification, 9 features, 4 classes): classification of older people motion data to detect motion labels: sitting on bed, sitting on chair, lying on bed, ambulating. 
+Activity recognition of older people by wearable sensors (classification, 4 classes): classification of older people motion data to detect motion labels: sitting on bed, sitting on chair, lying on bed, ambulating. 
 Dataset from https://archive.ics.uci.edu/ml/datasets/Activity+recognition+with+healthy+older+people+using+a+batteryless+wearable+sensor 
 
 * Wine (debug only)
