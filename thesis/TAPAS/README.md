@@ -120,14 +120,14 @@ The solution is composed of the following phases [components]:
 
 ## Abstract implementation
 The it.utiu.tapas.base package contains abstraction level of TAPAS:
-* AbstractBaseActor: shared constants, defines supervisor strategy, provides file writing function
-* AbstractTrainerActor: starts a Spark training session, handles StartTraining and TrainingFinished messages, invokes ml model building, selects fittest model by metrics, notifies predictors passing the fresh model
-* AbstractRegressionTrainerActor: implements the fittest regression model algo
-* AbstractClassificationTrainerActor: implements the fittest classification model algo
-* AbstractPredictorActor: starts a Spark prediction session, handles AskPrediction and TellPrediction messages, invokes specific prediction function
-* AbstractConsumerActor: starts a Kafka consuming session, receives message from topic and dispatches to predictor and/or save data input when reaches the buffer size limit
-* AbstractProducerActor: starts a Kafka producing session, listens on input files path and sends new data to topic
-* AbstractAnalyzerActor: starts a Spark analyzing session, handles StartAnalysis and AnalysisFinished messages, invokes specific analysis function and at the finishing save result into a csv file
+* AbstractBaseActor: shared constants, defines supervisor strategy, provides file writing function.
+* AbstractTrainerActor: starts a Spark training session, handles StartTraining and TrainingFinished messages, invokes ml model building, selects fittest model by metrics, notifies predictors passing the fresh model.
+* AbstractRegressionTrainerActor: implements the fittest regression model algo, logic to build a correlation matrix.
+* AbstractClassificationTrainerActor: implements the fittest classification model algo, logic to build a confusion matrix.
+* AbstractPredictorActor: starts a Spark prediction session, handles AskPrediction and TellPrediction messages, invokes specific prediction function.
+* AbstractConsumerActor: starts a Kafka consuming session, receives message from topic and dispatches to predictor and/or save data input when reaches the buffer size limit.
+* AbstractProducerActor: starts a Kafka producing session, listens on input files path and sends new data to topic.
+* AbstractAnalyzerActor: starts a Spark analyzing session, handles StartAnalysis and AnalysisFinished messages, invokes specific analysis function and at the finishing save result into a csv file.
 * AbstractStatsFeederActor: handles AskStats and TellStats messages, receives from analyzer fresh statistical data and when sollicited return its.
 
 

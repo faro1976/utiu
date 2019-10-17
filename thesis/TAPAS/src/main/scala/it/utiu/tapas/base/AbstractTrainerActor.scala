@@ -36,7 +36,7 @@ abstract class AbstractTrainerActor(name: String) extends AbstractBaseActor(name
     .getOrCreate()
   
   //Spark Context
-  val sc = spark.sparkContext
+  protected val sc = spark.sparkContext
   sc.setLogLevel("ERROR")
 
   

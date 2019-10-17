@@ -187,6 +187,12 @@ class BTCTrainerActor extends AbstractRegressionTrainerActor(Consts.CS_BTC) {
     
     evals.append(("GBTRegressor", modelGBT, predictionsGBT, (trainCount, testCount)))
     
+    //compute correlation matrix   
+    val assemblerCM = new VectorAssembler().setInputCols(Array("transactions_24h", "difficulty", "volume_24h", "mempool_transactions", "mempool_size", "mempool_tps", "mempool_total_fee_usd", "average_transaction_fee_24h", "nodes", "inflation_usd_24h", "average_transaction_fee_usd_24h", "market_price_usd", "next_difficulty_estimate", "suggested_transaction_fee_per_byte_sat")).setOutputCol("features")
+      .setHandleInvalid("skip")
+    val dfCM = assemblerCM.transform(df2)    
+    computeCorrelationMatrix(dfCM)    
+    
     evals.toList
   }
   

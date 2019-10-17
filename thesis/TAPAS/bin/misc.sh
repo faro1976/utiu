@@ -4,6 +4,8 @@
 FWK_PATH="/Users/rob/src/extlib"
 
 cd $FWK_PATH/hadoop-2.9.2
+bin/hdfs namenode -format
+
 bin/hadoop dfs -mkdir /wine
 bin/hadoop dfs -mkdir /activity
 bin/hadoop dfs -mkdir /btc

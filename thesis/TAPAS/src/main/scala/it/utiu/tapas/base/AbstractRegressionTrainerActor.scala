@@ -4,10 +4,13 @@ import org.apache.spark.ml.evaluation.RegressionEvaluator
 import it.utiu.tapas.util.Consts
 import java.util.Date
 import java.nio.file.StandardOpenOption
+import org.apache.spark.ml.linalg.{ Matrix, Vectors }
+import org.apache.spark.ml.stat.Correlation
+import org.apache.spark.sql.Row
 
 abstract class AbstractRegressionTrainerActor(name: String) extends AbstractTrainerActor(name) {
   
-override def calculateMetrics(algo: String, predictions: DataFrame, rows: (Long, Long)): Double = {
+  override def calculateMetrics(algo: String, predictions: DataFrame, rows: (Long, Long)): Double = {
     
     //print ml evaluation
     val evaluator = new RegressionEvaluator()
@@ -34,5 +37,24 @@ override def calculateMetrics(algo: String, predictions: DataFrame, rows: (Long,
     writeFile(RT_OUTPUT_PATH + Consts.CS_BTC + "-regression-eval.csv", str, Some(StandardOpenOption.APPEND))
     
     r2
+  }
+
+
+  protected def computeCorrelationMatrix(df: DataFrame) {
+    //compute correlation matrix
+    val Row(coeff1: Matrix) = Correlation.corr(df, "features").head
+    println(s"Pearson correlation matrix:\n $coeff1")
+
+    val Row(coeff2: Matrix) = Correlation.corr(df, "features", "spearman").head
+    println(coeff2.toString(Int.MaxValue, Int.MaxValue))
+
+    val buff = new StringBuilder("\n")
+    for (v <- coeff2.colIter) {
+      for (i <- v.toArray) {
+        buff.append(v.toArray.mkString(",") + "\n")
+      }
+    }
+    writeFile(ANALYTICS_OUTPUT_FILE+".corrMtx", buff.toString, None)
   }  
+
 }

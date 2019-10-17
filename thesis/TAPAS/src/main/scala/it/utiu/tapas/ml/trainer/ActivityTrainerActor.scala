@@ -77,12 +77,12 @@ class ActivityTrainerActor extends AbstractClassificationTrainerActor(Consts.CS_
     val modelRF = rf.fit(trainingData)
     val predictionsRF = modelRF.transform(testData)
     evals.append(("RandomForestClassifier", modelRF, predictionsRF, (trainCount, testCount)))
+
+    //build confusion matrix for each classifier
+    computeConfusionMatrix(predictionsLR, modelLR)
+    computeConfusionMatrix(predictionsDT, modelDT)
+    computeConfusionMatrix(predictionsRF, modelRF)
     
     evals.toList
   }
-
-  
-  //funzione generica per calcolo indicatori dei predittori
-
-  
 }

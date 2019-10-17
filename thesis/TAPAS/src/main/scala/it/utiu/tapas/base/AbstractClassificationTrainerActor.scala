@@ -7,6 +7,16 @@ import org.apache.spark.ml.evaluation.MulticlassClassificationEvaluator
 import java.nio.file.StandardOpenOption
 import it.utiu.tapas.util.Consts
 import java.util.Date
+import org.apache.spark.ml.Transformer
+import org.apache.spark.mllib.evaluation.MulticlassMetrics
+import org.apache.spark.ml.Predictor
+import org.apache.spark.mllib.evaluation.MulticlassMetrics
+import org.apache.spark.mllib.regression.LabeledPoint
+import org.apache.spark.mllib.util.MLUtils
+import org.apache.spark.ml.Model
+import org.apache.spark.ml.PredictionModel
+import scala.collection.mutable.ArrayBuffer
+import org.apache.spark.SparkContext
 
 abstract class AbstractClassificationTrainerActor(name: String) extends AbstractTrainerActor(name) {
 
@@ -32,6 +42,26 @@ abstract class AbstractClassificationTrainerActor(name: String) extends Abstract
     
     val str = tmstFormat.format(new Date()) + "," + algo + "," + (accuracy +","+counttotal+","+correct+","+wrong+","+trueP+","+falseP+","+trueN+","+falseN+","+ratioWrong+","+ratioCorrect) + "," + rows._1 + "," + rows._2 + "\n"
     writeFile(RT_OUTPUT_PATH + Consts.CS_BTC + "-classification-eval.csv", str, Some(StandardOpenOption.APPEND))
+        
     accuracy
+  }
+  
+  protected def computeConfusionMatrix(test: DataFrame, model: Transformer){
+    val locTest = test.collect()
+    val buff = ArrayBuffer[(Double,Double)]()
+    for (r<-locTest) {
+      buff.append((r.getAs[Double]("prediction"), r.getAs[Int]("label").toDouble))
+    }
+    val predictionAndLabels= sc.parallelize(buff)
+    
+//    val predictionAndLabels = test.rdd.map {r =>
+//      (r.getAs[Double]("prediction"), r.getAs[Int]("label").toDouble)
+//    }
+    
+    // Instantiate metrics object
+    val metrics = new MulticlassMetrics(predictionAndLabels)
+    
+    println("Confusion matrix:")
+    println(metrics.confusionMatrix)    
   }
 }

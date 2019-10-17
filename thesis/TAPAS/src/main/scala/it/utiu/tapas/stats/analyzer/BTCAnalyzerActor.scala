@@ -84,30 +84,8 @@ class BTCAnalyzerActor() extends AbstractAnalyzerActor(Consts.CS_BTC) {
     df6.show()
     val ret = df6.sort("datehour_only")
  
-    //compute correlation matrix   
-    val assembler = new VectorAssembler().setInputCols(Array("transactions_24h", "difficulty", "volume_24h", "mempool_transactions", "mempool_size", "mempool_tps", "mempool_total_fee_usd", "average_transaction_fee_24h", "nodes", "inflation_usd_24h", "average_transaction_fee_usd_24h", "market_price_usd", "next_difficulty_estimate", "suggested_transaction_fee_per_byte_sat")).setOutputCol("features")
-      .setHandleInvalid("skip")
-    val df7 = assembler.transform(df2)    
-    computeCorrelationMatrix(df7)
-    
     (ret.columns, ret.collectAsList().asScala.toList)        
   }
 
   
-  private def computeCorrelationMatrix(df: DataFrame) {
-    //compute correlation matrix
-    val Row(coeff1: Matrix) = Correlation.corr(df, "features").head
-    println(s"Pearson correlation matrix:\n $coeff1")
-
-    val Row(coeff2: Matrix) = Correlation.corr(df, "features", "spearman").head
-    println(coeff2.toString(Int.MaxValue, Int.MaxValue))
-
-    val buff = new StringBuilder("\n")
-    for (v <- coeff2.colIter) {
-      for (i <- v.toArray) {
-        buff.append(v.toArray.mkString(",") + "\n")
-      }
-    }
-    writeFile(ANALYTICS_OUTPUT_FILE+".corrMtx", buff.toString, None)
-  }  
 }
