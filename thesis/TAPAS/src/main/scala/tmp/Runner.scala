@@ -16,9 +16,12 @@ object App {
     val system = ActorSystem("hello-world")
     //creazione attore HelloWorld
     val greeter = system.actorOf(HelloWorldActor.props(),  "greeter")
+    
+    while(true){
     //invio messaggio fire-and-forget
     greeter ! Greet("Rob")
-    
+    Thread.sleep(5000)
+    }
     val syncGreeter = system.actorOf(HelloWorldSyncActor.props(),  "syncGreeter")
     implicit val timeout = Timeout(1 second)
     //invio messaggio request/response
