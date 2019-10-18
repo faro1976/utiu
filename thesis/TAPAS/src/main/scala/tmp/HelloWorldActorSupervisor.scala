@@ -20,7 +20,7 @@ class HelloWorldActorSupervisor extends Actor {
   override def supervisorStrategy = OneForOneStrategy() {
     case _: RestartException3 => Restart
     case _: ResumeException3 => Resume
-    case _: StopException3 => Stop
+    case _: StopException3 => Stop 
   } 
    
   val printer = context.actorOf(Props(new HelloWorldActor), "greeter")
