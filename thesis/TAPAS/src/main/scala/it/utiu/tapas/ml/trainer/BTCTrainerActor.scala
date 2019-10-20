@@ -62,8 +62,7 @@ class BTCTrainerActor extends AbstractRegressionTrainerActor(Consts.CS_BTC) {
     //load dataset from csv inferring schema
     val df1 = spark.read.json(HDFS_CS_PATH + "*")
 //        val df1 = spark.read.json(HDFS_CS_PATH + "blockchair/small/*")
-//    df1.show
-//    df1.printSchema()
+
     import spark.implicits._
     val df2 = df1.select("context.cache.since", "data.transactions_24h", "data.difficulty", "data.volume_24h", "data.mempool_transactions", "data.mempool_size", "data.mempool_tps", "data.mempool_total_fee_usd", "data.average_transaction_fee_24h", "data.nodes", "data.inflation_usd_24h", "data.average_transaction_fee_usd_24h", "data.market_price_usd", "data.next_difficulty_estimate", "data.suggested_transaction_fee_per_byte_sat")
 
@@ -179,12 +178,6 @@ class BTCTrainerActor extends AbstractRegressionTrainerActor(Consts.CS_BTC) {
     val predictionsGBT = modelGBT.transform(testData)
     predictionsGBT.show()
 
-//    //get predictions
-//    val valuesAndPreds = df1.rdd.map { point =>
-//      val prediction = modelGBT.predict(point.getAs[Vector]("features"))
-//      (prediction, point.getAs[Double]("label"))
-//    }
-    
     evals.append(("GBTRegressor", modelGBT, predictionsGBT, (trainCount, testCount)))
     
     //compute correlation matrix   
@@ -192,6 +185,15 @@ class BTCTrainerActor extends AbstractRegressionTrainerActor(Consts.CS_BTC) {
       .setHandleInvalid("skip")
     val dfCM = assemblerCM.transform(df2)    
     computeCorrelationMatrix(dfCM)    
+    
+    //write historical prediction results
+    val sb = new StringBuffer();
+    val locTest = predictionsGBT.sort("since").collect()
+    val buff = ArrayBuffer[(Date, Double,Double)]()
+    for (r<-locTest) {
+      sb.append(r.getAs[String]("since") + "," + r.getAs[Double]("prediction") +"," + r.getAs[Double]("label").toDouble + "\n")
+    }
+    writeFile(RT_OUTPUT_PATH + Consts.CS_BTC + "-historical.csv", sb.toString(), None)
     
     evals.toList
   }
