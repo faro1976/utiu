@@ -7,8 +7,6 @@ import akka.actor.OneForOneStrategy
 import akka.actor.SupervisorStrategy._
 import scala.concurrent.ExecutionContext.Implicits.global
 import akka.actor.Props
-import tmp.Exceptions3.ResumeException3
-import tmp.Exceptions3.RestartException3
 
 
 
@@ -18,9 +16,7 @@ class HelloWorldActorSupervisor extends Actor {
   override def postStop() = println("Bye Bye from the Supervisor")
  
   override def supervisorStrategy = OneForOneStrategy() {
-    case _: RestartException3 => Restart
-    case _: ResumeException3 => Resume
-    case _: StopException3 => Stop 
+    case _: Exception => Resume 
   } 
    
   val printer = context.actorOf(Props(new HelloWorldActor), "greeter")

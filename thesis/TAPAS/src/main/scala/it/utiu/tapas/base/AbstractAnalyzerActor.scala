@@ -41,7 +41,7 @@ abstract class AbstractAnalyzerActor(name: String) extends AbstractBaseActor(nam
     
     case AnalysisFinished(strCSV) =>
       log.info("analysis restart waiting...")
-      Thread.sleep(AbstractBaseActor.LOOP_DELAY)
+      Thread.sleep(AbstractBaseActor.LOOP_DELAY * 3)
       log.info("restart analysis")
       doAnalysis()
   }

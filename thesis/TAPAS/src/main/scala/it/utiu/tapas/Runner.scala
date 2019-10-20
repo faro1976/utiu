@@ -61,20 +61,20 @@ class Runner(system: ActorSystem, cs: String) {
         //create activity actors
         trainerRef = system.actorOf(ActivityTrainerActor.props(), "trainer-activity")
         predictorRef = system.actorOf(ActivityPredictorActor.props(), "predictor-activity")
-        consumerRef = system.actorOf(ActivityConsumerActor.props(predictorRef, null), "consumer-activity")
+        consumerRef = system.actorOf(ActivityConsumerActor.props(), "consumer-activity")
         producerRef = system.actorOf(ActivityProducerActor.props(), "producer-activity")
       case CS_BTC =>
         trainerRef = system.actorOf(BTCTrainerActor.props(), "trainer-btc")
         predictorRef = system.actorOf(BTCPredictorActor.props(), "predictor-btc")
         feederRef = system.actorOf(BTCFeederActor.props(), "feeder-btc")
         analyzerRef = system.actorOf(BTCAnalyzerActor.props(), "analyzer-btc")        
-        consumerRef = system.actorOf(BTCConsumerActor.props(predictorRef, feederRef), "consumer-btc")
+        consumerRef = system.actorOf(BTCConsumerActor.props(), "consumer-btc")
         producerRef = system.actorOf(BTCProducerActor.props(), "producer-btc")        
       case CS_WINE =>
         //create wine actors
         trainerRef = system.actorOf(WineTrainerActor.props(), "trainer-wine")
         predictorRef = system.actorOf(WinePredictorActor.props(), "predictor-wine")
-        consumerRef = system.actorOf(WineConsumerActor.props(predictorRef, null), "consumer-wine")
+        consumerRef = system.actorOf(WineConsumerActor.props(), "consumer-wine")
         producerRef = system.actorOf(WineProducerActor.props(), "producer-wine")
       case _ => throw new RuntimeException(cs + " case study code not supported!")
     }

@@ -8,8 +8,6 @@ import akka.actor.OneForOneStrategy
 import akka.actor.SupervisorStrategy._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
-import tmp.Exceptions3.ResumeException3
-import tmp.Exceptions3.RestartException3
 
 
 
@@ -42,17 +40,11 @@ class HelloWorldActor() extends Actor {
   override def preStart() = println("preStart")
   override def postStop() = println("postStop")
   
-  override val supervisorStrategy =
-    OneForOneStrategy() {
-      case ResumeException3 => Stop
-      case RestartException3 => Stop
-      case _: Exception => Escalate
-    }
   
   def receive = {    
     //ricezione messaggio
     case Greet(name) =>
-      if (i%3==0) throw RestartException3 else{println(i)
+      if (i%3==0) throw new Exception else{println(i)
         i=i+1}
       println("Hello " + name + ", Hello world!")
   }

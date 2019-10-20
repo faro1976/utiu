@@ -29,11 +29,11 @@ import com.google.gson.JsonObject
 
 
 object BTCConsumerActor {
-  def props(predictor: ActorRef, analyzer: ActorRef): Props = Props(new BTCConsumerActor(predictor, analyzer))
+  def props(): Props = Props(new BTCConsumerActor())
   val header=""
 }
 
-class BTCConsumerActor(predictor: ActorRef, analyzer: ActorRef) extends AbstractConsumerActor(Consts.CS_BTC, Consts.TOPIC_BTC, predictor, analyzer, BTCConsumerActor.header) {
+class BTCConsumerActor() extends AbstractConsumerActor(Consts.CS_BTC, Consts.TOPIC_BTC, BTCConsumerActor.header) {
      override def isPredictionRequest(line: String) = {
 //       val gson = new Gson()
 //       val jobj = gson.fromJson(line, classOf[JsonObject])

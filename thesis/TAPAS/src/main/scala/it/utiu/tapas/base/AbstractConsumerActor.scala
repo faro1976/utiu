@@ -45,8 +45,10 @@ object AbstractConsumerActor {
 }
 
 
-abstract class AbstractConsumerActor(name: String, topic: String, predictor: ActorRef, statsFeeder: ActorRef, header: String) extends AbstractBaseActor(name) {
-  var analyzerScheduler:Option[Cancellable] = None
+abstract class AbstractConsumerActor(name: String, topic: String, header: String) extends AbstractBaseActor(name) {
+  var analyzerScheduler:Option[Cancellable] = None  
+  val predictor = context.actorSelection("/user/predictor-" + name)
+  val statsFeeder = context.actorSelection("/user/feeder-" + name)
   
   override def receive: Receive = {
     //start consuming message
