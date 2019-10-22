@@ -41,7 +41,7 @@ abstract class AbstractClassificationTrainerActor(name: String) extends Abstract
     val accuracy = evaluator.evaluate(predictions)
     
     val str = tmstFormat.format(new Date()) + "," + algo + "," + (accuracy +","+counttotal+","+correct+","+wrong+","+trueP+","+falseP+","+trueN+","+falseN+","+ratioWrong+","+ratioCorrect) + "," + rows._1 + "," + rows._2 + "\n"
-    writeFile(RT_OUTPUT_PATH + Consts.CS_BTC + "-classification-eval.csv", str, Some(StandardOpenOption.APPEND))
+    writeFile(RT_OUTPUT_PATH + "classification-eval.csv", str, Some(StandardOpenOption.APPEND))
         
     accuracy
   }

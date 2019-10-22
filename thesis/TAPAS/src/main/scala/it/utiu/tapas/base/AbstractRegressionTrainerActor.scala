@@ -34,7 +34,7 @@ abstract class AbstractRegressionTrainerActor(name: String) extends AbstractTrai
     log.info(s"$algo - Mean absolute error: $mae")   
     
     val str = tmstFormat.format(new Date()) + "," + algo + "," + r2 + "," + rows._1 + "," + rows._2 + "\n"
-    writeFile(RT_OUTPUT_PATH + Consts.CS_BTC + "-regression-eval.csv", str, Some(StandardOpenOption.APPEND))
+    writeFile(RT_OUTPUT_PATH + "regression-eval.csv", str, Some(StandardOpenOption.APPEND))
     
     r2
   }

@@ -32,6 +32,9 @@ import akka.Version
 import it.utiu.tapas.stats.analyzer.BTCAnalyzerActor
 import it.utiu.tapas.ml.predictor.BTCPredictorActor
 import it.utiu.tapas.ml.predictor.BTCFeederActor
+import akka.actor.Cancellable
+import scala.concurrent.duration.DurationInt
+import scala.concurrent.ExecutionContext.Implicits.global
 
 object Runner {
 
@@ -90,7 +93,11 @@ class Runner(system: ActorSystem, cs: String) {
     producerRef ! AbstractProducerActor.StartProducing()
     Thread.sleep(2000)
     //stats data feeder (if supported)
-    if (analyzerRef != null) analyzerRef ! AbstractAnalyzerActor.StartAnalysis() 
+    if (analyzerRef != null) {
+      system.scheduler.scheduleOnce(10 minute) {        
+        analyzerRef ! AbstractAnalyzerActor.StartAnalysis()
+      }                      
+    }
 
     Await.ready(system.whenTerminated, Duration.Inf)
   }
