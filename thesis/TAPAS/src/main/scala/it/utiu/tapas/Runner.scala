@@ -83,8 +83,6 @@ class Runner(system: ActorSystem, cs: String) {
     }
 
     //start actors
-    //trainer
-    trainerRef ! AbstractTrainerActor.StartTraining()
     Thread.sleep(2000)
     //consumer
     consumerRef ! AbstractConsumerActor.StartConsuming()
@@ -92,6 +90,10 @@ class Runner(system: ActorSystem, cs: String) {
     //producer
     producerRef ! AbstractProducerActor.StartProducing()
     Thread.sleep(2000)
+    system.scheduler.scheduleOnce(1 minute) {        
+      //trainer
+      trainerRef ! AbstractTrainerActor.StartTraining()
+    }                          
     //stats data feeder (if supported)
     if (analyzerRef != null) {
       system.scheduler.scheduleOnce(10 minute) {        
