@@ -63,19 +63,19 @@ class BTCTrainerActor extends AbstractRegressionTrainerActor(Consts.CS_BTC) {
     import spark.implicits._
     val df2 = df1.select("context.cache.since", "data.transactions_24h", "data.difficulty", "data.volume_24h", "data.mempool_transactions", "data.mempool_size", "data.mempool_tps", "data.mempool_total_fee_usd", "data.average_transaction_fee_24h", "data.nodes", "data.inflation_usd_24h", "data.average_transaction_fee_usd_24h", "data.market_price_usd", "data.next_difficulty_estimate", "data.suggested_transaction_fee_per_byte_sat")
 
-    val dfHourlyWindow = df2
+    val dfDailyWindow = df2
       .groupBy(window(df2.col("since"), "1 day"))
-      .agg(avg("market_price_usd").as("hourly_average_price"))
-    dfHourlyWindow.show()
+      .agg(avg("market_price_usd").as("daily_average_price"))
+    dfDailyWindow.show()
     //shift end to next minute adding 60 secs
-    val df3_1 = df2.withColumn("next_hour", date_trunc("DAY", col("since") + expr("INTERVAL 1 DAYS")))
+    val df3_1 = df2.withColumn("next_day", date_trunc("DAY", col("since") + expr("INTERVAL 1 DAYS")))
     //and at the end join by window start time
-    val df3_2 = df3_1.withColumn("prev_hour", date_trunc("DAY", col("since"))) //.select(col("since"), col("prev_hour"))
+    val df3_2 = df3_1.withColumn("prev_day", date_trunc("DAY", col("since"))) //.select(col("since"), col("prev_day"))
     //and at the end join by window start time
-    val df3_3 = df3_2.join(dfHourlyWindow, col("next_hour") === date_trunc("DAY", col("window.start")))
-      .withColumnRenamed("hourly_average_price", "next_avg_price").withColumnRenamed("window", "next_window")
-      .join(dfHourlyWindow, col("prev_hour") === date_trunc("DAY", col("window.end")))
-      .withColumnRenamed("hourly_average_price", "prev_avg_price").withColumnRenamed("window", "prev_window")
+    val df3_3 = df3_2.join(dfDailyWindow, col("next_day") === date_trunc("DAY", col("window.start")))
+      .withColumnRenamed("daily_average_price", "next_avg_price").withColumnRenamed("window", "next_window")
+      .join(dfDailyWindow, col("prev_day") === date_trunc("DAY", col("window.end")))
+      .withColumnRenamed("daily_average_price", "prev_avg_price").withColumnRenamed("window", "prev_window")
     val df3 = df3_3
 
     //define model features
