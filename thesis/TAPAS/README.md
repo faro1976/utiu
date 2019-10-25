@@ -82,7 +82,7 @@ The consumer reads data analytics and stores it to rt/[case_study]/output/[case_
 Bitcoin price prediction and general statistics about Blockchain and Bitcoin network: regression techniques to predict Bitcoin price observing a set of features inside Blockchain and Bitcoin peer-to-peer network, adopting time window to predict the average price of Bitcoin in the next hour.
 Dataset retrieved from regular polling of Blockchair REST APIs (https://github.com/Blockchair/Blockchair.Support/blob/master/API.md).
 
-* Activity detection
+* Activity recognition
 
 Activity recognition of older people by wearable sensors (classification, 4 classes): classification of older people motion data to detect motion labels: sitting on bed, sitting on chair, lying on bed, ambulating. 
 Dataset from https://archive.ics.uci.edu/ml/datasets/Activity+recognition+with+healthy+older+people+using+a+batteryless+wearable+sensor 
@@ -102,7 +102,7 @@ To run TAPAS with a case study:
 java -Dconfig.file=cfg/application.conf -cp target/TAPAS-0.0.1-SNAPSHOT-jar-with-dependencies.jar it.utiu.tapas.Runner btc
 ``` 
 
-* case study Activity detection
+* case study Activity recognition
 
 ```shell
 java -Dconfig.file=cfg/application.conf -cp target/TAPAS-0.0.1-SNAPSHOT-jar-with-dependencies.jar it.utiu.tapas.Runner activity

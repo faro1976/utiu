@@ -1,6 +1,5 @@
 package it.utiu.tapas.util
 
-//TODO ROB trasformare in 2 enums
 object Consts {
   //list of all case study labels 
   val CS_WINE = "wine"

@@ -27,9 +27,8 @@ class WineTrainerActor extends AbstractClassificationTrainerActor(Consts.CS_WINE
 
   override def doInternalTraining(spark: SparkSession): List[(String, Transformer, DataFrame, (Long, Long))] = {
 
-    
     //caricamento dataset come CSV inferendo lo schema dall'header
-    val df1 = spark.read.format("csv").option("header", "true").option("inferSchema", "true").load(HDFS_CS_PATH+"*").withColumn("label", col("Class"))
+    val df1 = spark.read.format("csv").option("header", "true").option("inferSchema", "true").load(HDFS_CS_PATH + "*").withColumn("label", col("Class"))
 
     //definisco le feature e le aggiungo come colonna "features"
     val assembler = new VectorAssembler().setInputCols(Array("Alcohol", "Malic", "Ash", "Alcalinity", "Magnesium", "phenols", "Flavanoids", "Nonflavanoid", "Proanthocyanins", "Color", "Hue", "OD280", "Proline")).setOutputCol("features")
@@ -49,7 +48,7 @@ class WineTrainerActor extends AbstractClassificationTrainerActor(Consts.CS_WINE
       .setRegParam(0.3)
       .setElasticNetParam(0.8)
     //      .setFamily("multinomial")
-      
+
     val modelLR = lr.fit(df2)
     val predictionsLR = modelLR.transform(testData)
     predictionsLR.select("prediction", "label", "features").show(5)
@@ -61,7 +60,6 @@ class WineTrainerActor extends AbstractClassificationTrainerActor(Consts.CS_WINE
     val accuracy = evaluator.evaluate(predictionsLR)
     println("accuracy: " + accuracy)
 
-    return List(("LogisticRegression",modelLR,predictionsLR,(trainingData.count(),testData.count())))
+    return List(("LogisticRegression", modelLR, predictionsLR, (trainingData.count(), testData.count())))
   }
-
 }

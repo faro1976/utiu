@@ -24,9 +24,6 @@ class ActivityPredictorActor() extends AbstractPredictorActor(Consts.CS_ACTIVITY
   override def doInternalPrediction(msgs: String, spark: SparkSession, model: Transformer): String = {
     //cast to List[List[Double]]
     val buffInput = new ListBuffer[List[Double]]()
-    //    msgs.foreach(m=>buffInput.append(m.split(",").map(_.).toList))
-    //    val input :List[List[Double]] =buffInput.toList
-    //    val input = msgs.split(",").map(_.).toList
     val tokens = msgs.split(",")
     val input = (tokens(0).toDouble, tokens(1).toDouble, tokens(2).toDouble, tokens(3).toDouble, tokens(4).toDouble, tokens(5).toDouble, tokens(6).toDouble, tokens(7).toDouble)
 
@@ -44,7 +41,4 @@ class ActivityPredictorActor() extends AbstractPredictorActor(Consts.CS_ACTIVITY
 
     return ret.asInstanceOf[List[Double]](0).toString()
   }
-
-  
-//  override def getAlgo()= LogisticRegressionModel.read
 }

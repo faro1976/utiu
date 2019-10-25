@@ -8,6 +8,9 @@ import java.text.SimpleDateFormat
 import AbstractBaseActor.HDFS_URL
 import akka.actor.Actor
 import akka.actor.ActorLogging
+import org.apache.spark.SparkConf
+import org.apache.spark.sql.SparkSession
+import org.apache.spark.SparkContext
 
 object AbstractBaseActor {
   //static application params
@@ -38,6 +41,29 @@ abstract class AbstractBaseActor(name: String) extends Actor with ActorLogging {
 
   //date pattern for csv
   val tmstFormat = new SimpleDateFormat("yyMMdd HH:mm")
+
+  //Spark objects
+  var conf: SparkConf = null
+  var spark: SparkSession = null
+  var sc: SparkContext = null
+
+  protected def initSpark(task: String, url: String) {
+    //Spark Configuration
+    conf = new SparkConf()
+      .setAppName(name + "-" + task)
+      .setMaster(url)
+      .set("fs.hdfs.impl", "org.apache.hadoop.hdfs.DistributedFileSystem")
+      .set("fs.file.impl", "org.apache.hadoop.fs.LocalFileSystem")
+
+    //Spark Session
+    spark = SparkSession.builder
+      .config(conf)
+      .getOrCreate()
+
+    //Spark Context
+    sc = spark.sparkContext
+    sc.setLogLevel("ERROR")
+  }
 
   protected def writeFile(file: String, text: String, mode: Option[StandardOpenOption]) {
     val path = Paths.get(file)

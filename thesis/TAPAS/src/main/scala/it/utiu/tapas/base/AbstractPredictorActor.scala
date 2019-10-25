@@ -23,7 +23,6 @@ import org.apache.spark.ml.regression.GBTRegressionModel
 import org.apache.spark.ml.classification.DecisionTreeClassificationModel
 import org.apache.spark.ml.classification.RandomForestClassificationModel
 
-
 object AbstractPredictorActor {
   //ask prediction message
   case class AskPrediction(msgs: String)
@@ -31,41 +30,24 @@ object AbstractPredictorActor {
   case class TellPrediction(prediction: String, input: String)
 }
 
-
 abstract class AbstractPredictorActor(name: String) extends AbstractBaseActor(name) {
   var mlModel: Transformer = null
-  
-  //Spark Configuration
-  val conf = new SparkConf().setAppName(name + "-prediction")
-    .setMaster(SPARK_URL_PREDICTION)
-    .set("fs.hdfs.impl", "org.apache.hadoop.hdfs.DistributedFileSystem")
-    .set("fs.file.impl","org.apache.hadoop.fs.LocalFileSystem")      
 
-  //Spark Session 
-  val spark = SparkSession.builder
-    .config(conf)
-    .getOrCreate()
-    
-  //Spark Context
-  val sc = spark.sparkContext
-  sc.setLogLevel("ERROR")
-  
+  initSpark("predictor", SPARK_URL_PREDICTION)
 
-  
   override def receive: Receive = {
     case AskPrediction(msgs: String) =>
       val prediction = doPrediction(msgs)
-      if (prediction != null) sender ! TellPrediction(prediction, getInput(msgs))      
+      if (prediction != null) sender ! TellPrediction(prediction, getInput(msgs))
 
     case AbstractTrainerActor.TrainingFinished(model: Transformer) =>
       mlModel = model.asInstanceOf[Transformer];
       log.info("reloaded model " + mlModel + " just built")
   }
 
-  
   def doInternalPrediction(msgs: String, spark: SparkSession, model: Transformer): String
-  
-  def getInput(msg: String): String = msg 
+
+  def getInput(msg: String): String = msg
 
   private def doPrediction(msgs: String): String = {
     log.info("start prediction...")
@@ -73,8 +55,8 @@ abstract class AbstractPredictorActor(name: String) extends AbstractBaseActor(na
     if (mlModel == null) {
       if (!Files.exists(Paths.get(ML_MODEL_FILE))) return null
       mlModel = loadModelFromDisk()
-    } 
-    
+    }
+
     //invoke internal
     val prediction = doInternalPrediction(msgs, spark, mlModel)
 
@@ -83,25 +65,25 @@ abstract class AbstractPredictorActor(name: String) extends AbstractBaseActor(na
 
     return prediction
   }
-  
-  private def loadModelFromDisk() : Transformer = {
-      log.info("restoring model " + ML_MODEL_FILE_COPY + " from disk...")
-      //delete old copy-of-model
-      FileUtils.deleteDirectory(new File(ML_MODEL_FILE_COPY))
-      //create a fresh copy-of-model
-      FileUtils.copyDirectory(new File(ML_MODEL_FILE), new File(ML_MODEL_FILE_COPY), true);
-      //load copy-of-model
-//      getAlgo().load(ML_MODEL_FILE_COPY)
-      val algo = scala.io.Source.fromFile(ML_MODEL_FILE+".algo").getLines().next()
-      algo match {
-        case "org.apache.spark.ml.regression.LinearRegressionModel" => LinearRegressionModel.read.load(ML_MODEL_FILE_COPY)
-        case "org.apache.spark.ml.regression.DecisionTreeRegressorModel" =>  DecisionTreeRegressionModel.read.load(ML_MODEL_FILE_COPY)
-        case "org.apache.spark.ml.regression.RandomForestRegressionModel" =>  RandomForestRegressionModel.read.load(ML_MODEL_FILE_COPY)
-        case "org.apache.spark.ml.regression.GBTRegressionModel" =>  GBTRegressionModel.read.load(ML_MODEL_FILE_COPY)
-        case "org.apache.spark.ml.classification.LogisticRegressionModel" =>  LogisticRegressionModel.read.load(ML_MODEL_FILE_COPY)
-        case "org.apache.spark.ml.classification.DecisionTreeClassificationModel" =>  DecisionTreeClassificationModel.read.load(ML_MODEL_FILE_COPY)        
-        case "org.apache.spark.ml.classification.RandomForestClassificationModel" =>  RandomForestClassificationModel.read.load(ML_MODEL_FILE_COPY)
-      }
-//      PipelineModel.load(ML_MODEL_FILE_COPY)
-  }  
+
+  private def loadModelFromDisk(): Transformer = {
+    log.info("restoring model " + ML_MODEL_FILE_COPY + " from disk...")
+    //delete old copy-of-model
+    FileUtils.deleteDirectory(new File(ML_MODEL_FILE_COPY))
+    //create a fresh copy-of-model
+    FileUtils.copyDirectory(new File(ML_MODEL_FILE), new File(ML_MODEL_FILE_COPY), true);
+    //load copy-of-model
+    //      getAlgo().load(ML_MODEL_FILE_COPY)
+    val algo = scala.io.Source.fromFile(ML_MODEL_FILE + ".algo").getLines().next()
+    algo match {
+      case "org.apache.spark.ml.regression.LinearRegressionModel"               => LinearRegressionModel.read.load(ML_MODEL_FILE_COPY)
+      case "org.apache.spark.ml.regression.DecisionTreeRegressorModel"          => DecisionTreeRegressionModel.read.load(ML_MODEL_FILE_COPY)
+      case "org.apache.spark.ml.regression.RandomForestRegressionModel"         => RandomForestRegressionModel.read.load(ML_MODEL_FILE_COPY)
+      case "org.apache.spark.ml.regression.GBTRegressionModel"                  => GBTRegressionModel.read.load(ML_MODEL_FILE_COPY)
+      case "org.apache.spark.ml.classification.LogisticRegressionModel"         => LogisticRegressionModel.read.load(ML_MODEL_FILE_COPY)
+      case "org.apache.spark.ml.classification.DecisionTreeClassificationModel" => DecisionTreeClassificationModel.read.load(ML_MODEL_FILE_COPY)
+      case "org.apache.spark.ml.classification.RandomForestClassificationModel" => RandomForestClassificationModel.read.load(ML_MODEL_FILE_COPY)
+    }
+    //      PipelineModel.load(ML_MODEL_FILE_COPY)
+  }
 }

@@ -2,8 +2,6 @@ package it.utiu.anavis
 
 import scala.util.Random
 
-import org.apache.spark.ml.classification.LogisticRegression
-import org.apache.spark.ml.evaluation.MulticlassClassificationEvaluator
 import org.apache.spark.ml.feature.VectorAssembler
 import org.apache.spark.ml.util.MLWritable
 import org.apache.spark.sql.SparkSession
@@ -61,7 +59,7 @@ class BTCTrainerActor extends AbstractRegressionTrainerActor(Consts.CS_BTC) {
 
     //load dataset from csv inferring schema
     val df1 = spark.read.json(HDFS_CS_PATH + "*")
-//        val df1 = spark.read.json(HDFS_CS_PATH + "blockchair/small/*")
+    //        val df1 = spark.read.json(HDFS_CS_PATH + "blockchair/small/*")
 
     import spark.implicits._
     val df2 = df1.select("context.cache.since", "data.transactions_24h", "data.difficulty", "data.volume_24h", "data.mempool_transactions", "data.mempool_size", "data.mempool_tps", "data.mempool_total_fee_usd", "data.average_transaction_fee_24h", "data.nodes", "data.inflation_usd_24h", "data.average_transaction_fee_usd_24h", "data.market_price_usd", "data.next_difficulty_estimate", "data.suggested_transaction_fee_per_byte_sat")
@@ -71,21 +69,10 @@ class BTCTrainerActor extends AbstractRegressionTrainerActor(Consts.CS_BTC) {
       .agg(avg("market_price_usd").as("hourly_average_price"))
     dfHourlyWindow.show()
     //shift end to next minute adding 60 secs
-    //    val df3 = df2.withColumn("end", date_format(to_date(timeUdf(col("since")), "yyyy-MM-dd HH:mm:ss"), "yyyy-MM-dd HH:00:00"))
-    //reset minutes and seconds, then shift to next hour
-    //    val df3 = df2.withColumn("end", (col("since")-minute(col("since"))-second(col("since"))+expr("INTERVAL 1 HOURS")))
-    //    val df3_1 = df2.withColumn("next_hour", date_trunc("HOUR", col("since")+expr("INTERVAL 1 HOURS"))).select(col("since"), col("next_hour"), col("hourly_average_price").as("next_avg_price"))
     val df3_1 = df2.withColumn("next_hour", date_trunc("DAY", col("since") + expr("INTERVAL 1 DAYS")))
     //and at the end join by window start time
-    //      .join(dfHourlyWindow, col("next_hour") === date_trunc("HOUR",col("window.start")))
-    df3_1.show()
-    //    val df3_2 = df2.withColumn("prev_hour", date_trunc("HOUR", col("since"))).select(col("since"), col("prev_hour"), col("hourly_average_price").as("prev_avg_price"))
     val df3_2 = df3_1.withColumn("prev_hour", date_trunc("DAY", col("since"))) //.select(col("since"), col("prev_hour"))
     //and at the end join by window start time
-    //      .join(dfHourlyWindow, col("prev_hour") === date_trunc("HOUR",col("window.end")))
-    //    val df3 = df2.join(df3_1, "since").join(df3_2, "since")
-    df3_2.show()
-
     val df3_3 = df3_2.join(dfHourlyWindow, col("next_hour") === date_trunc("DAY", col("window.start")))
       .withColumnRenamed("hourly_average_price", "next_avg_price").withColumnRenamed("window", "next_window")
       .join(dfHourlyWindow, col("prev_hour") === date_trunc("DAY", col("window.end")))
@@ -94,13 +81,11 @@ class BTCTrainerActor extends AbstractRegressionTrainerActor(Consts.CS_BTC) {
     df3.show()
 
     //define model features
-//    val assembler = new VectorAssembler().setInputCols(Array("transactions_24h", "difficulty", "mempool_transactions", "average_transaction_fee_24h", "nodes", "inflation_usd_24h", "suggested_transaction_fee_per_byte_sat", "prev_avg_price", "next_avg_price")).setOutputCol("features")
-    val assembler = new VectorAssembler().setInputCols(Array("transactions_24h", "difficulty", "mempool_transactions", "average_transaction_fee_24h", "nodes", "inflation_usd_24h", "suggested_transaction_fee_per_byte_sat", /*"prev_avg_price", */"market_price_usd")).setOutputCol("features")
+    val assembler = new VectorAssembler().setInputCols(Array("transactions_24h", "difficulty", "mempool_transactions", "average_transaction_fee_24h", "nodes", "inflation_usd_24h", "suggested_transaction_fee_per_byte_sat", /*"prev_avg_price", */ "market_price_usd")).setOutputCol("features")
       .setHandleInvalid("skip")
     //define model label
-//    val df4 = assembler.transform(df3).withColumn("label", df3.col("market_price_usd")).cache()
-      val df4 = assembler.transform(df3).withColumn("label", df3.col("next_avg_price")).cache()
-      
+    val df4 = assembler.transform(df3).withColumn("label", df3.col("next_avg_price")).cache()
+
     df4.show()
     df4.printSchema()
 
@@ -114,53 +99,53 @@ class BTCTrainerActor extends AbstractRegressionTrainerActor(Consts.CS_BTC) {
 
     //(modelName, model, predictions, (train count, test count))
     val evals = ArrayBuffer[(String, Transformer, DataFrame, (Long, Long))]()
-    
+
     //LinearRegression
     //build regression model
     val lr = new LinearRegression()
       .setMaxIter(10)
       .setRegParam(0.3)
       .setElasticNetParam(0.8)
-      
+
     //learn from training set
     val modelLR = lr.fit(trainingData)
-      
+
     //print model parameters
     println(s"Coefficients: ${modelLR.coefficients} Intercept: ${modelLR.intercept}")
-    
+
     //validate model by test set
     val predictionsLR = modelLR.transform(testData)
-        
+
     evals.append(("LinearRegression", modelLR, predictionsLR, (trainCount, testCount)))
-    
+
     //DecisionTreeRegression
     //build regression model
     val dtr = new DecisionTreeRegressor()
       .setLabelCol("label")
-      .setFeaturesCol("features")    
-      
+      .setFeaturesCol("features")
+
     //learn from training set
     val modelDTR = dtr.fit(trainingData)
-      
+
     //validate model by test set
     val predictionsDTR = modelDTR.transform(testData)
-    
+
     evals.append(("DecisionTreeRegression", modelDTR, predictionsDTR, (trainCount, testCount)))
-    
+
     //RandomForestRegressor
     //build regression model
     val rfr = new RandomForestRegressor()
       .setLabelCol("label")
-      .setFeaturesCol("features")    
-      
+      .setFeaturesCol("features")
+
     //learn from training set
     val modelRFR = rfr.fit(trainingData)
-    
+
     //validate model by test set
     val predictionsRFR = modelRFR.transform(testData)
-    
+
     evals.append(("RandomForestRegressor", modelRFR, predictionsRFR, (trainCount, testCount)))
-    
+
     //GBT
     //build regression model
     val GBT = new GBTRegressor()
@@ -179,24 +164,23 @@ class BTCTrainerActor extends AbstractRegressionTrainerActor(Consts.CS_BTC) {
     predictionsGBT.show()
 
     evals.append(("GBTRegressor", modelGBT, predictionsGBT, (trainCount, testCount)))
-    
-    //compute correlation matrix   
+
+    //compute correlation matrix
     val assemblerCM = new VectorAssembler().setInputCols(Array("transactions_24h", "difficulty", "volume_24h", "mempool_transactions", "mempool_size", "mempool_tps", "mempool_total_fee_usd", "average_transaction_fee_24h", "nodes", "inflation_usd_24h", "average_transaction_fee_usd_24h", "market_price_usd", "next_difficulty_estimate", "suggested_transaction_fee_per_byte_sat")).setOutputCol("features")
       .setHandleInvalid("skip")
-    val dfCM = assemblerCM.transform(df2)    
-    computeCorrelationMatrix(dfCM)    
-    
+    val dfCM = assemblerCM.transform(df2)
+    computeCorrelationMatrix(dfCM)
+
     //write historical prediction results
     val sb = new StringBuffer();
     val locTest = predictionsGBT.sort("since").collect()
-    val buff = ArrayBuffer[(Date, Double,Double)]()
-    for (r<-locTest) {
-      sb.append(r.getAs[String]("since") + "," + r.getAs[Double]("prediction") +"," + r.getAs[Double]("label").toDouble + "\n")
+    val buff = ArrayBuffer[(Date, Double, Double)]()
+    for (r <- locTest) {
+      sb.append(r.getAs[String]("since") + "," + r.getAs[Double]("prediction") + "," + r.getAs[Double]("label").toDouble + "\n")
     }
     writeFile(RT_OUTPUT_PATH + Consts.CS_BTC + "-historical.csv", sb.toString(), None)
-    
+
     evals.toList
   }
-  
-  
+
 }

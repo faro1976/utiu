@@ -18,27 +18,12 @@ object AbstractAnalyzerActor {
 }
 
 abstract class AbstractAnalyzerActor(name: String) extends AbstractBaseActor(name) {
-  //Spark Configuration
-  val conf = new SparkConf()
-    .setAppName(name + "-analysis")
-    .setMaster(SPARK_URL_ANALYSIS)
-    .set("fs.hdfs.impl", "org.apache.hadoop.hdfs.DistributedFileSystem")
-    .set("fs.file.impl","org.apache.hadoop.fs.LocalFileSystem")
-    
-  //Spark Session  
-  val spark = SparkSession.builder
-    .config(conf)
-    .getOrCreate()
-    
-  //Spark Context  
-  val sc = spark.sparkContext
-  sc.setLogLevel("ERROR")
-    
-  
+  initSpark("analyzer", SPARK_URL_ANALYSIS)
+
   override def receive: Receive = {
 
     case StartAnalysis() => doAnalysis()
-    
+
     case AnalysisFinished(strCSV) =>
       log.info("analysis restart waiting...")
       Thread.sleep(AbstractBaseActor.LOOP_DELAY * 3)
@@ -57,19 +42,18 @@ abstract class AbstractAnalyzerActor(name: String) extends AbstractBaseActor(nam
     //format csv
     val buff = new StringBuilder()
     //csv header
-    buff.append(stats._1.mkString(",")+"\n")
+    buff.append(stats._1.mkString(",") + "\n")
     //csv values
-    stats._2.foreach(row=>
-      buff.append(row.toSeq.mkString(",")+"\n")
-    )
-    log.info("stats computed:\n"+buff)        
-    
+    stats._2.foreach(row =>
+      buff.append(row.toSeq.mkString(",") + "\n"))
+    log.info("stats computed:\n" + buff)
+
     //terminate context
     //spark.stop()
 
     //message to refresh feeder stats data
-    context.actorSelection("/user/feeder-" + name) ! AbstractAnalyzerActor.AnalysisFinished(buff.toString) 
-    
+    context.actorSelection("/user/feeder-" + name) ! AbstractAnalyzerActor.AnalysisFinished(buff.toString)
+
     //self-message to start a new training
     self ! AbstractAnalyzerActor.AnalysisFinished(buff.toString)
   }

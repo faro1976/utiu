@@ -9,9 +9,9 @@ import org.apache.spark.ml.stat.Correlation
 import org.apache.spark.sql.Row
 
 abstract class AbstractRegressionTrainerActor(name: String) extends AbstractTrainerActor(name) {
-  
+
   override def calculateMetrics(algo: String, predictions: DataFrame, rows: (Long, Long)): Double = {
-    
+
     //print ml evaluation
     val evaluator = new RegressionEvaluator()
       .setLabelCol("label")
@@ -31,14 +31,13 @@ abstract class AbstractRegressionTrainerActor(name: String) extends AbstractTrai
 
     evaluator.setMetricName("mae")
     val mae = evaluator.evaluate(predictions)
-    log.info(s"$algo - Mean absolute error: $mae")   
-    
+    log.info(s"$algo - Mean absolute error: $mae")
+
     val str = tmstFormat.format(new Date()) + "," + algo + "," + r2 + "," + rows._1 + "," + rows._2 + "\n"
     writeFile(RT_OUTPUT_PATH + "regression-eval.csv", str, Some(StandardOpenOption.APPEND))
-    
+
     r2
   }
-
 
   protected def computeCorrelationMatrix(df: DataFrame) {
     //compute correlation matrix
@@ -54,7 +53,7 @@ abstract class AbstractRegressionTrainerActor(name: String) extends AbstractTrai
         buff.append(v.toArray.mkString(",") + "\n")
       }
     }
-    writeFile(ANALYTICS_OUTPUT_FILE+".corrMtx", buff.toString, None)
-  }  
+    writeFile(ANALYTICS_OUTPUT_FILE + ".corrMtx", buff.toString, None)
+  }
 
 }

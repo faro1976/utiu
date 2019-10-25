@@ -1,6 +1,5 @@
 package it.utiu.tapas.stream.consumer
 
-import akka.actor.ActorRef
 import akka.actor.Props
 import it.utiu.tapas.util.Consts
 
@@ -12,5 +11,5 @@ object ActivityConsumerActor {
 }
 
 class ActivityConsumerActor() extends AbstractConsumerActor(Consts.CS_ACTIVITY, Consts.TOPIC_ACTIVITY, ActivityConsumerActor.header) {
-   override def isPredictionRequest(row: String) : Boolean = row.split(",").size == (ActivityConsumerActor.COLS_NUM-1)
+  override def isPredictionRequest(row: String): Boolean = row.split(",").size == (ActivityConsumerActor.COLS_NUM - 1)
 }

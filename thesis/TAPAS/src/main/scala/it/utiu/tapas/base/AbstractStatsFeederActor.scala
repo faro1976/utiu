@@ -11,17 +11,14 @@ import org.apache.spark.ml.Transformer
 import it.utiu.tapas.base.AbstractStatsFeederActor.AskStats
 import it.utiu.tapas.base.AbstractStatsFeederActor.TellStats
 
-
 object AbstractStatsFeederActor {
   case class AskStats()
-  case class TellStats(strCSV: String)  
+  case class TellStats(strCSV: String)
 }
-
 
 abstract class AbstractStatsFeederActor(name: String) extends AbstractBaseActor(name) {
   var strCSV: String = null;
 
-  
   override def receive: Receive = {
     case AskStats() =>
       log.info("stats requested")
@@ -30,5 +27,5 @@ abstract class AbstractStatsFeederActor(name: String) extends AbstractBaseActor(
       log.info("refreshed stats data just built")
       strCSV = result
   }
-  
+
 }

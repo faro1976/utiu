@@ -29,19 +29,19 @@ class AbstractProducerActor(name: String, topic: String) extends AbstractBaseAct
   }
 
   private def doProduce() {
-    log.info("start producing for "+name+"...")
+    log.info("start producing for " + name + "...")
     val watchService = FileSystems.getDefault.newWatchService()
     Paths.get(RT_INPUT_PATH).register(watchService, ENTRY_CREATE)
 
     while (true) {
-      log.info("waiting new files from "+RT_INPUT_PATH+"...")
+      log.info("waiting new files from " + RT_INPUT_PATH + "...")
       val key = watchService.take()
-      key.pollEvents().asScala.foreach(e => {        
+      key.pollEvents().asScala.foreach(e => {
         e.kind() match {
-          case ENTRY_CREATE => 
+          case ENTRY_CREATE =>
             val dir = key.watchable().asInstanceOf[Path]
             val fullPath = dir.resolve(e.context().toString());
-            log.info("what service event received: ["+fullPath+"] created")            
+            log.info("what service event received: [" + fullPath + "] created")
             elabFile(fullPath.toString())
           case x =>
             println("?")
@@ -55,7 +55,7 @@ class AbstractProducerActor(name: String, topic: String) extends AbstractBaseAct
 
   private def elabFile(filePath: String) {
     Thread.sleep(500)
-    log.info("process file "+filePath)
+    log.info("process file " + filePath)
     implicit val materializer: ActorMaterializer = ActorMaterializer()
     implicit val executionContext: ExecutionContext = context.system.dispatcher
     val producerSettings = ProducerSettings(context.system, new ByteArraySerializer, new StringSerializer)

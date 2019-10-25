@@ -36,51 +36,49 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import java.text.SimpleDateFormat
 import it.utiu.tapas.base.AbstractStatsFeederActor
 
-
 object AbstractConsumerActor {
   //start consuming message
   case class StartConsuming()
-  //max buffered items to store 
-  val BUFF_SIZE = 5  
+  //max buffered items to store
+  val BUFF_SIZE = 5
 }
 
-
 abstract class AbstractConsumerActor(name: String, topic: String, header: String) extends AbstractBaseActor(name) {
-  var analyzerScheduler:Option[Cancellable] = None  
+  var analyzerScheduler: Option[Cancellable] = None
   val predictor = context.actorSelection("/user/predictor-" + name)
   val statsFeeder = context.actorSelection("/user/feeder-" + name)
-  
+
   override def receive: Receive = {
     //start consuming message
-    case AbstractConsumerActor.StartConsuming() => 
+    case AbstractConsumerActor.StartConsuming() =>
       doConsuming()
-      if (statsFeeder!=null) {
-        analyzerScheduler = Some(context.system.scheduler.schedule(10 second, 120 second) {        
+      if (statsFeeder != null) {
+        analyzerScheduler = Some(context.system.scheduler.schedule(10 second, 120 second) {
           statsFeeder ! AbstractStatsFeederActor.AskStats()
-        })                      
+        })
       }
-      
+
     //received prediction message
-    case AbstractPredictorActor.TellPrediction(prediction, input) => 
+    case AbstractPredictorActor.TellPrediction(prediction, input) =>
       log.info("received prediction: " + prediction)
       val txtOut = tmstFormat.format(new Date()) + "," + input + "," + prediction + "\n"
       writeFile(RT_OUTPUT_FILE, txtOut, Some(StandardOpenOption.APPEND))
-      
+
     case AbstractStatsFeederActor.TellStats(strCSV) =>
       if (strCSV != null) {
         writeFile(ANALYTICS_OUTPUT_FILE, strCSV, None)
-      }      
+      }
   }
 
   //buffered messages to store
   val buffer = ArrayBuffer[String]()
-  
+
   //internal
   def isPredictionRequest(row: String): Boolean = false
   def isAlwaysInput(): Boolean = false
-  
+
   private def doConsuming() {
-    log.info("start consuming for "+name+"...")
+    log.info("start consuming for " + name + "...")
     implicit val materializer: ActorMaterializer = ActorMaterializer()
     implicit val executionContext: ExecutionContext = context.system.dispatcher
 

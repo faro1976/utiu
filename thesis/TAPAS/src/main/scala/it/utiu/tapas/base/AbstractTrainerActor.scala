@@ -16,32 +16,16 @@ import scala.collection.mutable.ArrayBuffer
 object AbstractTrainerActor {
   //start training message
   case class StartTraining()
-  //finished training message  
+  //finished training message
   case class TrainingFinished(model: Transformer)
 }
 
-
 abstract class AbstractTrainerActor(name: String) extends AbstractBaseActor(name) {
-    
-  //Spark Configuration
-  val conf = new SparkConf()
-    .setAppName(name + "-training")
-    .setMaster(SPARK_URL_TRAINING)
-    .set("fs.hdfs.impl", "org.apache.hadoop.hdfs.DistributedFileSystem")
-    .set("fs.file.impl","org.apache.hadoop.fs.LocalFileSystem")
-  
-  //Spark Session
-  val spark = SparkSession.builder
-    .config(conf)
-    .getOrCreate()
-  
-  //Spark Context
-  protected val sc = spark.sparkContext
-  sc.setLogLevel("ERROR")
 
-  
+  initSpark("trainer", SPARK_URL_TRAINING)
+
   def calculateMetrics(algo: String, predictions: DataFrame, rows: (Long, Long)): Double
-  
+
   override def receive: Receive = {
 
     case StartTraining() =>
@@ -53,15 +37,15 @@ abstract class AbstractTrainerActor(name: String) extends AbstractBaseActor(name
       log.info("restart training")
       doTraining()
   }
-  
+
   def doInternalTraining(sc: SparkSession): List[(String, Transformer, DataFrame, (Long, Long))]
-  
+
   private def doTraining() {
     log.info("start training...")
-    
+
     //invoke internal
     val evals = doInternalTraining(spark)
-    
+
     //choose fittest model by r2/accuracy evaluator on regression/classification
     val metrics = ArrayBuffer[(Transformer, Double)]()
     for (eval <- evals) {
@@ -69,13 +53,11 @@ abstract class AbstractTrainerActor(name: String) extends AbstractBaseActor(name
       metrics.append((eval._2, value))
     }
     val fittest = metrics.maxBy(_._2)._1
-    
+
     //save ml model
     log.info("saving ml model into " + ML_MODEL_FILE + "...")
     fittest.asInstanceOf[MLWritable].write.overwrite().save(ML_MODEL_FILE)
-    writeFile(ML_MODEL_FILE+".algo", fittest.getClass.getName, None)
-//    val pipeline = new Pipeline().setStages(Array(ml))
-//    pipeline.getStages(0).write.overwrite.save(ML_MODEL_FILE)
+    writeFile(ML_MODEL_FILE + ".algo", fittest.getClass.getName, None)
     log.info("saved ml model into " + ML_MODEL_FILE + "...")
 
     //terminate context
@@ -88,5 +70,4 @@ abstract class AbstractTrainerActor(name: String) extends AbstractBaseActor(name
     self ! AbstractTrainerActor.TrainingFinished(fittest)
   }
 
-  
 }

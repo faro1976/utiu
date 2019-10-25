@@ -42,7 +42,7 @@ object Runner {
     //create akka system
     val system = ActorSystem("tapas")
     println("starting TAPAS at " + new Date() + "...")
-    val cs = if (args.size > 0) args(0) else CS_BTC  //default case study
+    val cs = if (args.size > 0) args(0) else CS_BTC //default case study
     val app = new Runner(system, cs)
     app.run(cs)
   }
@@ -70,9 +70,9 @@ class Runner(system: ActorSystem, cs: String) {
         trainerRef = system.actorOf(BTCTrainerActor.props(), "trainer-btc")
         predictorRef = system.actorOf(BTCPredictorActor.props(), "predictor-btc")
         feederRef = system.actorOf(BTCFeederActor.props(), "feeder-btc")
-        analyzerRef = system.actorOf(BTCAnalyzerActor.props(), "analyzer-btc")        
+        analyzerRef = system.actorOf(BTCAnalyzerActor.props(), "analyzer-btc")
         consumerRef = system.actorOf(BTCConsumerActor.props(), "consumer-btc")
-        producerRef = system.actorOf(BTCProducerActor.props(), "producer-btc")        
+        producerRef = system.actorOf(BTCProducerActor.props(), "producer-btc")
       case CS_WINE =>
         //create wine actors
         trainerRef = system.actorOf(WineTrainerActor.props(), "trainer-wine")
@@ -90,15 +90,15 @@ class Runner(system: ActorSystem, cs: String) {
     //producer
     producerRef ! AbstractProducerActor.StartProducing()
     Thread.sleep(2000)
-    system.scheduler.scheduleOnce(1 minute) {        
+    system.scheduler.scheduleOnce(1 minute) {
       //trainer
       trainerRef ! AbstractTrainerActor.StartTraining()
-    }                          
+    }
     //stats data feeder (if supported)
     if (analyzerRef != null) {
-      system.scheduler.scheduleOnce(10 minute) {        
+      system.scheduler.scheduleOnce(10 minute) {
         analyzerRef ! AbstractAnalyzerActor.StartAnalysis()
-      }                      
+      }
     }
 
     Await.ready(system.whenTerminated, Duration.Inf)
