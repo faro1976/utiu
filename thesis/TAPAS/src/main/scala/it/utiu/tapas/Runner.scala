@@ -66,6 +66,7 @@ class Runner(system: ActorSystem, cs: String) {
         predictorRef = system.actorOf(ActivityPredictorActor.props(), "predictor-activity")
         consumerRef = system.actorOf(ActivityConsumerActor.props(), "consumer-activity")
         producerRef = system.actorOf(ActivityProducerActor.props(), "producer-activity")
+        feederRef = system.actorOf(ActivityProducerActor.props(), "feeder-activity")
       case CS_BTC =>
         trainerRef = system.actorOf(BTCTrainerActor.props(), "trainer-btc")
         predictorRef = system.actorOf(BTCPredictorActor.props(), "predictor-btc")
