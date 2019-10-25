@@ -59,7 +59,6 @@ class BTCTrainerActor extends AbstractRegressionTrainerActor(Consts.CS_BTC) {
 
     //load dataset from csv inferring schema
     val df1 = spark.read.json(HDFS_CS_PATH + "*")
-    //        val df1 = spark.read.json(HDFS_CS_PATH + "blockchair/small/*")
 
     import spark.implicits._
     val df2 = df1.select("context.cache.since", "data.transactions_24h", "data.difficulty", "data.volume_24h", "data.mempool_transactions", "data.mempool_size", "data.mempool_tps", "data.mempool_total_fee_usd", "data.average_transaction_fee_24h", "data.nodes", "data.inflation_usd_24h", "data.average_transaction_fee_usd_24h", "data.market_price_usd", "data.next_difficulty_estimate", "data.suggested_transaction_fee_per_byte_sat")
@@ -78,7 +77,6 @@ class BTCTrainerActor extends AbstractRegressionTrainerActor(Consts.CS_BTC) {
       .join(dfHourlyWindow, col("prev_hour") === date_trunc("DAY", col("window.end")))
       .withColumnRenamed("hourly_average_price", "prev_avg_price").withColumnRenamed("window", "prev_window")
     val df3 = df3_3
-    df3.show()
 
     //define model features
     val assembler = new VectorAssembler().setInputCols(Array("transactions_24h", "difficulty", "mempool_transactions", "average_transaction_fee_24h", "nodes", "inflation_usd_24h", "suggested_transaction_fee_per_byte_sat", /*"prev_avg_price", */ "market_price_usd")).setOutputCol("features")
@@ -161,8 +159,6 @@ class BTCTrainerActor extends AbstractRegressionTrainerActor(Consts.CS_BTC) {
 
     //validate model by test set
     val predictionsGBT = modelGBT.transform(testData)
-    predictionsGBT.show()
-
     evals.append(("GBTRegressor", modelGBT, predictionsGBT, (trainCount, testCount)))
 
     //compute correlation matrix

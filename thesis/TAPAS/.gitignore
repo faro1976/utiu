@@ -2,7 +2,8 @@
 
 .cache-main
 
-/analytics/
 /ml-model/
-/rt/
 
+/rt/btc/input/
+/rt/activity/input/
+/rt/wine/input/

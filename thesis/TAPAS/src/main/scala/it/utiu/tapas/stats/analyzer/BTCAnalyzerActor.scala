@@ -35,9 +35,6 @@ class BTCAnalyzerActor() extends AbstractAnalyzerActor(Consts.CS_BTC) {
   override def doInternalAnalysis(spark: SparkSession): (Array[String], scala.collection.immutable.List[Row]) = {
 
     val df1 = spark.read.json(HDFS_CS_PATH + "*")
-    //        val df1 = spark.read.json(HDFS_CS_PATH + "blockchair/small/*")
-    df1.show
-    df1.printSchema()
     import spark.implicits._
     import org.apache.spark.sql.functions._
 
@@ -52,15 +49,12 @@ class BTCAnalyzerActor() extends AbstractAnalyzerActor(Consts.CS_BTC) {
       .agg(avg("market_price_usd").as("hourly_average_price"))
     dfHourlyWindow.show()
     val df3_1 = df2.withColumn("next_hour", date_trunc("HOUR", col("since") + expr("INTERVAL 1 HOURS")))
-    df3_1.show()
 
     val df3 = df3_1.join(dfHourlyWindow, col("next_hour") === date_trunc("HOUR", col("window.start")))
       .withColumnRenamed("hourly_average_price", "next_avg_price").withColumnRenamed("window", "next_window")
-    df3.show()
 
     //add yyyy-MM-dd HH date
     val df4 = df3.withColumn("datehour_only", date_format(to_timestamp(col("since"), "yyyy-MM-dd HH:mm:ss"), "yyyy-MM-dd HH"))
-    df4.show()
 
     //instant and last24h values, compute average
     val df5 = df4.groupBy("datehour_only").agg(mean("difficulty").as("avgDifficulty"), mean("nodes").as("avgNodes"), mean("mempool_transactions").as("avgMempoolTxs"), mean("market_price_usd").as("avgPriceUSD"), mean("transactions_24h").as("avgTx24h"), mean("volume_24h").as("avgVolume24h"), mean("average_transaction_fee_24h").as("avgTxFee24h"), mean("inflation_usd_24h").as("avgInflatUSD24h"), mean("next_avg_price").as("avgNextAvgPrice"))
