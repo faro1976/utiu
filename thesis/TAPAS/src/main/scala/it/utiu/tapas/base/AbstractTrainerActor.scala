@@ -60,9 +60,6 @@ abstract class AbstractTrainerActor(name: String) extends AbstractBaseActor(name
     writeFile(ML_MODEL_FILE + ".algo", fittest.getClass.getName, None)
     log.info("saved ml model into " + ML_MODEL_FILE + "...")
 
-    //terminate context
-    //spark.stop()
-
     //notify predictor forcing model refresh
     context.actorSelection("/user/predictor-" + name) ! TrainingFinished(fittest)
 

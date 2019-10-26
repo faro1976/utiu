@@ -60,9 +60,6 @@ abstract class AbstractPredictorActor(name: String) extends AbstractBaseActor(na
     //invoke internal
     val prediction = doInternalPrediction(msgs, spark, mlModel)
 
-    //terminate context
-    //    spark.stop()
-
     return prediction
   }
 
@@ -73,7 +70,6 @@ abstract class AbstractPredictorActor(name: String) extends AbstractBaseActor(na
     //create a fresh copy-of-model
     FileUtils.copyDirectory(new File(ML_MODEL_FILE), new File(ML_MODEL_FILE_COPY), true);
     //load copy-of-model
-    //      getAlgo().load(ML_MODEL_FILE_COPY)
     val algo = scala.io.Source.fromFile(ML_MODEL_FILE + ".algo").getLines().next()
     algo match {
       case "org.apache.spark.ml.regression.LinearRegressionModel"               => LinearRegressionModel.read.load(ML_MODEL_FILE_COPY)

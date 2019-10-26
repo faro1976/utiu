@@ -48,9 +48,6 @@ abstract class AbstractAnalyzerActor(name: String) extends AbstractBaseActor(nam
       buff.append(row.toSeq.mkString(",") + "\n"))
     log.info("stats computed:\n" + buff)
 
-    //terminate context
-    //spark.stop()
-
     //message to refresh feeder stats data
     context.actorSelection("/user/feeder-" + name) ! AbstractAnalyzerActor.AnalysisFinished(buff.toString)
 

@@ -2,3 +2,10 @@
 191024 18:01,DecisionTreeRegression,-Infinity,953,439
 191024 18:02,RandomForestRegressor,-Infinity,953,439
 191024 18:02,GBTRegressor,-Infinity,953,439
+191026 17:52,LinearRegression,-Infinity,970,422
+191026 17:56,DecisionTreeRegression,-Infinity,970,422
+191026 18:01,RandomForestRegressor,-Infinity,970,422
+191026 18:18,LinearRegression,0.9986779443959813,2254,906
+191026 18:18,DecisionTreeRegression,0.9995905398975089,2254,906
+191026 18:18,RandomForestRegressor,0.9994628240273111,2254,906
+191026 18:19,GBTRegressor,0.9998125276288368,2254,906

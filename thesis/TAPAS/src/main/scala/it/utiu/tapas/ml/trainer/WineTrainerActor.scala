@@ -47,7 +47,7 @@ class WineTrainerActor extends AbstractClassificationTrainerActor(Consts.CS_WINE
       .setMaxIter(10)
       .setRegParam(0.3)
       .setElasticNetParam(0.8)
-    //      .setFamily("multinomial")
+      .setFamily("multinomial")
 
     val modelLR = lr.fit(df2)
     val predictionsLR = modelLR.transform(testData)

@@ -57,6 +57,7 @@ class ActivityTrainerActor extends AbstractClassificationTrainerActor(Consts.CS_
     val lr = new LogisticRegression().setMaxIter(3).setRegParam(0.3).setElasticNetParam(0.8)
       .setLabelCol("label")
       .setFeaturesCol("features")
+      .setFamily("multinomial")      
     val modelLR = lr.fit(trainingData)
     val predictionsLR = modelLR.transform(testData)
     evals.append(("LogisticRegression", modelLR, predictionsLR, (trainCount, testCount)))    
